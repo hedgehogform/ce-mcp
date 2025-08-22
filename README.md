@@ -39,7 +39,6 @@ A Model Context Protocol (MCP) server plugin for Cheat Engine that provides HTTP
 - Auto-discovers tools using MCP SDK attributes
 
 ## Requirements
-
 - Cheat Engine 7.0+
 - .NET Framework 4.8.1
 - Windows OS -->
