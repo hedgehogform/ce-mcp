@@ -8,6 +8,8 @@ namespace CeMCP
     {
         private IDisposable _webApp;
         private readonly McpPlugin _plugin = plugin;
+        
+        public bool IsRunning => _webApp != null;
 
         public void Start(string url)
         {
@@ -18,6 +20,7 @@ namespace CeMCP
         public async Task StopAsync()
         {
             _webApp?.Dispose();
+            _webApp = null;
             await Task.CompletedTask;
         }
     }

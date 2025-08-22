@@ -1,5 +1,7 @@
 ﻿using CESDK;
+using System;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CeMCP
@@ -8,6 +10,10 @@ namespace CeMCP
     {
         private bool _isServerRunning = false;
         private MCPServerWrapper _mcpServer;
+        private ConfigurationWindow _configWindow = null;
+        private Thread _configThread = null;
+        
+        public bool IsServerRunning => _isServerRunning;
 
         public override string GetPluginName()
         {
@@ -19,6 +25,7 @@ namespace CeMCP
         {
             sdk.lua.Register("toggle_mcp_server", ToggleMCPServer);
             sdk.lua.Register("update_button_text", UpdateButtonText);
+            sdk.lua.Register("show_mcp_config", ShowMCPConfig);
 
             sdk.lua.DoString(@"
                 local m=MainForm.Menu
@@ -32,6 +39,13 @@ namespace CeMCP
                     toggle_mcp_server()
                 end
                 topm.add(mcpToggleMenuItem)
+                
+                mcpConfigMenuItem=createMenuItem(m)
+                mcpConfigMenuItem.Caption='Configure'
+                mcpConfigMenuItem.OnClick=function(s)
+                    show_mcp_config()
+                end
+                topm.add(mcpConfigMenuItem)
             ");
 
             return true;
@@ -59,12 +73,103 @@ namespace CeMCP
             return 1;
         }
 
+        int ShowMCPConfig()
+        {
+            try
+            {
+                // Check if window is already open
+                if (_configWindow != null && _configThread != null && _configThread.IsAlive)
+                {
+                    // Try to bring existing window to front
+                    _configWindow?.Dispatcher?.BeginInvoke(new Action(() =>
+                    {
+                        if (_configWindow.WindowState == System.Windows.WindowState.Minimized)
+                            _configWindow.WindowState = System.Windows.WindowState.Normal;
+                        _configWindow.Activate();
+                        _configWindow.Topmost = true;
+                        _configWindow.Topmost = false;
+                        _configWindow.Focus();
+                    }));
+                    return 1;
+                }
+
+                _configThread = new Thread(() =>
+                {
+                    try
+                    {
+                        // Create and start WPF message pump properly
+                        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                            System.Windows.Threading.DispatcherPriority.Normal,
+                            new Action(() =>
+                            {
+                                _configWindow = new ConfigurationWindow(this);
+                                
+                                // Handle window closing to clean up references
+                                _configWindow.Closed += (sender, e) =>
+                                {
+                                    _configWindow = null;
+                                    System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvokeShutdown(
+                                        System.Windows.Threading.DispatcherPriority.Background);
+                                };
+                                
+                                _configWindow.Show();
+                            }));
+                        
+                        // Start the WPF dispatcher message loop
+                        System.Windows.Threading.Dispatcher.Run();
+                        
+                        _configThread = null;
+                    }
+                    catch (Exception ex)
+                    {
+                        sdk.lua.DoString($"print('Error in configuration window: {ex.Message}')");
+                        _configWindow = null;
+                        _configThread = null;
+                    }
+                });
+                
+                _configThread.SetApartmentState(ApartmentState.STA);
+                _configThread.Start();
+                return 1;
+            }
+            catch (Exception ex)
+            {
+                sdk.lua.DoString($"print('Error opening configuration: {ex.Message}')");
+                return 0;
+            }
+        }
+
+        public void RestartServer()
+        {
+            if (_isServerRunning)
+            {
+                StopMCPServer().Wait();
+                StartMCPServer();
+            }
+        }
+
+        public MCPServerWrapper GetServerWrapper()
+        {
+            return _mcpServer;
+        }
+
+        public void StartServer()
+        {
+            StartMCPServer();
+        }
+
+        public void StopServer()
+        {
+            StopMCPServer().Wait();
+        }
+
         void StartMCPServer()
         {
             if (_isServerRunning) return;
 
             _mcpServer = new MCPServerWrapper(this);
-            ServerConfig.LoadFromEnvironment();
+            ServerConfig.LoadFromFile();
+            ServerConfig.LoadFromEnvironment(); // Environment variables override config file
             _mcpServer.Start(ServerConfig.BaseUrl);
 
             _isServerRunning = true;

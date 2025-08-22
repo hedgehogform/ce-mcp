@@ -26,5 +26,17 @@ namespace CeMCP.Controllers
         {
             return _tools.GetProcessList();
         }
+
+        [HttpGet]
+        [Route("health")]
+        public IHttpActionResult GetHealth()
+        {
+            return Ok(new { 
+                status = "healthy", 
+                server = ServerConfig.ServerName,
+                version = typeof(CheatEngineController).Assembly.GetName().Version?.ToString(),
+                timestamp = System.DateTime.UtcNow
+            });
+        }
     }
 }
