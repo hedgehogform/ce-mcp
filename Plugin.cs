@@ -1,7 +1,4 @@
-﻿#nullable enable
-using CESDK;
-using ModelContextProtocol.Protocol;
-using System;
+﻿using CESDK;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -10,17 +7,12 @@ namespace CeMCP
     public class McpPlugin : CESDKPluginClass
     {
         private bool _isServerRunning = false;
+        private MCPServerWrapper _mcpServer;
 
         public override string GetPluginName()
         {
             var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
             return $"MCP Server for Cheat Engine v{version}";
-        }
-
-        public override bool DisablePlugin()
-        {
-            StopMCPServer().Wait();
-            return true;
         }
 
         public override bool EnablePlugin()
@@ -45,6 +37,12 @@ namespace CeMCP
             return true;
         }
 
+        public override bool DisablePlugin()
+        {
+            StopMCPServer().Wait();
+            return true;
+        }
+
         int ToggleMCPServer()
         {
             if (_isServerRunning)
@@ -63,12 +61,25 @@ namespace CeMCP
 
         void StartMCPServer()
         {
-            // TODO: Implement mcp
+            if (_isServerRunning) return;
+
+            _mcpServer = new MCPServerWrapper(this);
+            _mcpServer.Start("http://localhost:6300");
+
+            _isServerRunning = true;
+            UpdateButtonText();
         }
 
         async Task StopMCPServer()
         {
-            //    Stop mcp
+            if (!_isServerRunning) return;
+
+            if (_mcpServer != null)
+                await _mcpServer.StopAsync();
+
+            _mcpServer = null;
+            _isServerRunning = false;
+            UpdateButtonText();
         }
     }
 }

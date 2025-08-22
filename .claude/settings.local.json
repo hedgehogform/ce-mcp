@@ -3,7 +3,8 @@
     "allow": [
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:devblogs.microsoft.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []
