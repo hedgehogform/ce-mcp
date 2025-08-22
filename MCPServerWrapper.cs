@@ -4,15 +4,10 @@ using Microsoft.Owin.Hosting;
 
 namespace CeMCP
 {
-    public class MCPServerWrapper
+    public class MCPServerWrapper(McpPlugin plugin)
     {
         private IDisposable _webApp;
-        private readonly McpPlugin _plugin;
-
-        public MCPServerWrapper(McpPlugin plugin)
-        {
-            _plugin = plugin;
-        }
+        private readonly McpPlugin _plugin = plugin;
 
         public void Start(string url)
         {

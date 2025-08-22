@@ -64,9 +64,11 @@ namespace CeMCP
             if (_isServerRunning) return;
 
             _mcpServer = new MCPServerWrapper(this);
-            _mcpServer.Start("http://localhost:6300");
+            ServerConfig.LoadFromEnvironment();
+            _mcpServer.Start(ServerConfig.BaseUrl);
 
             _isServerRunning = true;
+            sdk.lua.DoString($"print('MCP API Started on: {ServerConfig.BaseUrl}')");
             UpdateButtonText();
         }
 
@@ -76,9 +78,9 @@ namespace CeMCP
 
             if (_mcpServer != null)
                 await _mcpServer.StopAsync();
-
             _mcpServer = null;
             _isServerRunning = false;
+            sdk.lua.DoString("print('MCP API stopped')");
             UpdateButtonText();
         }
     }

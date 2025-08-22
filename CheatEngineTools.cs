@@ -1,57 +1,27 @@
-using System;
-using CESDK;
+using CeMCP.Models;
+using CeMCP.Tools;
 
 namespace CeMCP
 {
-    public class LuaRequest
-    {
-        public string Code { get; set; }
-    }
-
-    public class LuaResponse
-    {
-        public string Result { get; set; }
-        public bool Success { get; set; }
-    }
-
     public class CheatEngineTools
     {
-        private readonly McpPlugin _plugin;
+        private readonly LuaExecutionTool _luaExecutionTool;
+        private readonly ProcessListTool _processListTool;
 
         public CheatEngineTools(McpPlugin plugin)
         {
-            _plugin = plugin;
+            _luaExecutionTool = new LuaExecutionTool(plugin);
+            _processListTool = new ProcessListTool(plugin);
         }
 
         public LuaResponse ExecuteLua(LuaRequest request)
         {
-            try
-            {
-                if (request?.Code == null)
-                {
-                    return new LuaResponse
-                    {
-                        Result = "Code parameter is required",
-                        Success = false
-                    };
-                }
+            return _luaExecutionTool.ExecuteLua(request);
+        }
 
-                var result = _plugin.sdk.lua.DoString(request.Code);
-
-                return new LuaResponse
-                {
-                    Result = result.ToString(),
-                    Success = true
-                };
-            }
-            catch (Exception e)
-            {
-                return new LuaResponse
-                {
-                    Result = e.Message,
-                    Success = false
-                };
-            }
+        public ProcessListResponse GetProcessList()
+        {
+            return _processListTool.GetProcessList();
         }
     }
 }

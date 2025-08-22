@@ -3,27 +3,10 @@ using System.Web.Http;
 using Owin;
 using System.ComponentModel.DataAnnotations;
 using Swashbuckle.Application;
+using CeMCP.Controllers;
 
 namespace CeMCP
 {
-    [RoutePrefix("api/cheatengine")]
-    public class CheatEngineController : ApiController
-    {
-        private readonly CheatEngineTools _tools;
-
-        public CheatEngineController(CheatEngineTools tools)
-        {
-            _tools = tools;
-        }
-
-        [HttpPost]
-        [Route("execute-lua")]
-        public LuaResponse ExecuteLua([FromBody] LuaRequest request)
-        {
-            return _tools.ExecuteLua(request);
-        }
-    }
-
     public class Startup
     {
         private readonly McpPlugin _plugin;
@@ -60,6 +43,7 @@ namespace CeMCP
     public class CheatEngineDependencyResolver : System.Web.Http.Dependencies.IDependencyResolver
     {
         private readonly McpPlugin _plugin;
+        private bool _disposed = false;
 
         public CheatEngineDependencyResolver(McpPlugin plugin)
         {
@@ -85,12 +69,27 @@ namespace CeMCP
 
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources here if any
+                }
+                _disposed = true;
+            }
         }
     }
 
     public class CheatEngineDependencyScope : System.Web.Http.Dependencies.IDependencyScope
     {
         private readonly McpPlugin _plugin;
+        private bool _disposed = false;
 
         public CheatEngineDependencyScope(McpPlugin plugin)
         {
@@ -111,6 +110,20 @@ namespace CeMCP
 
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources here if any
+                }
+                _disposed = true;
+            }
         }
     }
 }

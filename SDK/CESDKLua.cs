@@ -102,6 +102,8 @@ namespace CESDK
         private delegate int dlua_gettable(IntPtr state, int idx);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_settable(IntPtr state, int idx);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int dlua_getfield(IntPtr state, int idx, [MarshalAs(UnmanagedType.LPStr)]string k);
 
 
 
@@ -163,6 +165,7 @@ namespace CESDK
         private dlua_rawlen lua_rawlen;
         private dlua_gettable lua_gettable;
         private dlua_settable lua_settable;
+        private dlua_getfield lua_getfield;
         private dlua_callk lua_callk;
         private dlua_pcallk lua_pcallk;
 
@@ -340,6 +343,8 @@ namespace CESDK
         public int GetTable(int idx) { return lua_gettable(State, idx); }
         public int SetTable(IntPtr L, int idx) { return lua_settable(L, idx); }
         public int SetTable(int idx) { return lua_settable(State, idx); }
+        public int GetField(IntPtr L, int idx, string k) { return lua_getfield(L, idx, k); }
+        public int GetField(int idx, string k) { return lua_getfield(State, idx, k); }
 
         public string ToString(IntPtr L, int idx)
         {
@@ -438,6 +443,7 @@ namespace CESDK
 
                 lua_gettable = Marshal.GetDelegateForFunctionPointer<dlua_gettable>(GetProcAddress(hLibLua, "lua_gettable"));
                 lua_settable = Marshal.GetDelegateForFunctionPointer<dlua_settable>(GetProcAddress(hLibLua, "lua_settable"));
+                lua_getfield = Marshal.GetDelegateForFunctionPointer<dlua_getfield>(GetProcAddress(hLibLua, "lua_getfield"));
 
 
 

@@ -9,9 +9,6 @@ namespace CeMCP
         public static int Port { get; set; } = 6300;
         public static string BaseUrl => $"http://{Host}:{Port}";
         public static string ServerName { get; set; } = "Cheat Engine MCP Server";
-        public static string Version { get; set; } = "1.0.0";
-        public static string Protocol { get; set; } = "Model Context Protocol";
-        public static string Transport { get; set; } = "HTTP";
 
         public static void LoadFromEnvironment()
         {
