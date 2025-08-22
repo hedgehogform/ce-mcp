@@ -1,5 +1,8 @@
 # Cheat Engine MCP Server
 
+This project is not ready yet.
+
+<!--
 A Model Context Protocol (MCP) server plugin for Cheat Engine that provides HTTP access to Cheat Engine functionality.
 
 ## Features
@@ -39,4 +42,4 @@ A Model Context Protocol (MCP) server plugin for Cheat Engine that provides HTTP
 
 - Cheat Engine 7.0+
 - .NET Framework 4.8.1
-- Windows OS
+- Windows OS -->

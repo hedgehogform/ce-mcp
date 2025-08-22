@@ -1,15 +1,15 @@
-﻿using CESDK;
+﻿#nullable enable
+using CESDK;
+using ModelContextProtocol.Protocol;
 using System;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 
 namespace CeMCP
 {
-    class McpPlugin : CESDKPluginClass
+    public class McpPlugin : CESDKPluginClass
     {
-        private MCPServer? _mcpServer;
+        private bool _isServerRunning = false;
 
         public override string GetPluginName()
         {
@@ -17,16 +17,16 @@ namespace CeMCP
             return $"MCP Server for Cheat Engine v{version}";
         }
 
-        public override bool DisablePlugin() //called when disabled
+        public override bool DisablePlugin()
         {
-            _mcpServer?.StopAsync();
+            StopMCPServer().Wait();
             return true;
         }
 
-        public override bool EnablePlugin() //called when enabled
+        public override bool EnablePlugin()
         {
-            sdk.lua.Register("start_mcp_server", StartMCPServer);
-            sdk.lua.Register("stop_mcp_server", StopMCPServer);
+            sdk.lua.Register("toggle_mcp_server", ToggleMCPServer);
+            sdk.lua.Register("update_button_text", UpdateButtonText);
 
             sdk.lua.DoString(@"
                 local m=MainForm.Menu
@@ -34,67 +34,41 @@ namespace CeMCP
                 topm.Caption='MCP'
                 m.Items.insert(MainForm.miHelp.MenuIndex,topm)
 
-                local startMenuItem=createMenuItem(m)
-                startMenuItem.Caption='Start MCP Server';
-                startMenuItem.OnClick=function(s)
-                start_mcp_server()
+                mcpToggleMenuItem=createMenuItem(m)
+                mcpToggleMenuItem.Caption='Start MCP Server'
+                mcpToggleMenuItem.OnClick=function(s)
+                    toggle_mcp_server()
                 end
-                topm.add(startMenuItem)
-
-                local stopMenuItem=createMenuItem(m)
-                stopMenuItem.Caption='Stop MCP Server';
-                stopMenuItem.OnClick=function(s)
-                stop_mcp_server()
-                end
-                topm.add(stopMenuItem)
-                ");
+                topm.add(mcpToggleMenuItem)
+            ");
 
             return true;
         }
 
-        int StartMCPServer()
+        int ToggleMCPServer()
         {
-            try
-            {
-                if (_mcpServer == null)
-                {
-                    _mcpServer = new MCPServer();
-                    _ = Task.Run(async () => await _mcpServer.StartAsync());
-                    sdk.lua.DoString("print('MCP Server started on http://localhost:6300/')");
-                }
-                else
-                {
-                    sdk.lua.DoString("print('MCP Server is already running')");
-                }
-            }
-            catch (Exception ex)
-            {
-                sdk.lua.DoString($"print('Error starting MCP Server: {ex.Message}')");
-            }
+            if (_isServerRunning)
+                StopMCPServer().Wait();
+            else
+                StartMCPServer();
             return 1;
         }
 
-        int StopMCPServer()
+        int UpdateButtonText()
         {
-            try
-            {
-                if (_mcpServer != null)
-                {
-                    _ = Task.Run(async () => await _mcpServer.StopAsync());
-                    _mcpServer = null;
-                    sdk.lua.DoString("print('MCP Server stopped')");
-                }
-                else
-                {
-                    sdk.lua.DoString("print('MCP Server is not running')");
-                }
-            }
-            catch (Exception ex)
-            {
-                sdk.lua.DoString($"print('Error stopping MCP Server: {ex.Message}')");
-            }
+            string buttonText = _isServerRunning ? "Stop MCP Server" : "Start MCP Server";
+            sdk.lua.DoString($"mcpToggleMenuItem.Caption='{buttonText}'");
             return 1;
         }
 
+        void StartMCPServer()
+        {
+            // TODO: Implement mcp
+        }
+
+        async Task StopMCPServer()
+        {
+            //    Stop mcp
+        }
     }
 }
