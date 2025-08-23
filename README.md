@@ -1,44 +1,54 @@
 # Cheat Engine MCP Server
 
-This project is not ready yet.
+> [!WARNING]
+> This project is not feature complete and is under active development.
 
-<!--
-A Model Context Protocol (MCP) server plugin for Cheat Engine that provides HTTP access to Cheat Engine functionality.
+A Model Context Protocol (MCP) server plugin for Cheat Engine that provides access to Cheat Engine functionality.
 
-## Features
+## Current Features
 
-- HTTP-based MCP server running on `http://localhost:6300`
-- Integration with Cheat Engine via plugin interface
-- Basic tools for getting server information and status
-- CORS support for web-based MCP clients
+- Execute Lua code in Cheat Engine
+- Get list of running processes
+
+## Requirements
+
+- Cheat Engine 7.0+
+- .NET Framework 4.8.1
+- Windows OS
 
 ## Installation
 
-1. Build the project to generate `ce-mcp.dll`
-2. Copy the DLL to your Cheat Engine plugins directory
+1. Build the project: `dotnet build`
+2. Copy `ce-mcp.dll` from `bin/` to your Cheat Engine plugins directory
 3. Enable the plugin in Cheat Engine
 
-## Usage
+## Development
 
-1. **Enable Plugin**: Load the plugin in Cheat Engine
-2. **Start Server**: Use the menu `MCP → Start MCP Server`
-3. **Connect**: Point your MCP client to `http://localhost:6300`
-4. **Stop Server**: Use the menu `MCP → Stop MCP Server`
+### Building
 
-## Available Tools
+```bash
+# Build the C# plugin
+dotnet build
 
-- `get_info` - Get information about the Cheat Engine MCP Server
-- `echo` - Echo a message back to the client
-- `get_status` - Get current status of Cheat Engine
+# Build in Release mode
+dotnet build -c Release
+```
 
-## Technical Details
+### Python MCP Client
 
-- Built with .NET Framework 4.8.1
-- Uses Microsoft.Owin.Hosting for HTTP server
-- Implements Model Context Protocol v2024-11-05
-- Auto-discovers tools using MCP SDK attributes
+```bash
+# Navigate to mcp-client directory
+cd mcp-client
 
-## Requirements
-- Cheat Engine 7.0+
-- .NET Framework 4.8.1
-- Windows OS -->
+# Install dependencies
+uv sync
+
+# Open cheat_engine_mcp_server.py in your AI software.
+```
+
+### Testing
+
+1. Build the plugin and copy to Cheat Engine plugins directory
+2. Start Cheat Engine and enable the plugin
+3. Use MCP menu to start/stop the server
+4. Test API endpoints at `http://localhost:6300/swagger`

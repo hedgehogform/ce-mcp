@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "hedgehogform",
+        "projectKey": "hedgehogform_ce-mcp"
+    }
+}
