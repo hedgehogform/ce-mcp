@@ -1,14 +1,19 @@
 namespace CeMCP.Models
 {
+    public class BaseResponse
+    {
+        public bool Success { get; set; }
+        public string Error { get; set; }
+    }
+
     public class LuaRequest
     {
         public string Code { get; set; }
     }
 
-    public class LuaResponse
+    public class LuaResponse : BaseResponse
     {
         public string Result { get; set; }
-        public bool Success { get; set; }
     }
 
     public class ProcessInfo
@@ -17,11 +22,9 @@ namespace CeMCP.Models
         public string ProcessName { get; set; }
     }
 
-    public class ProcessListResponse
+    public class ProcessListResponse : BaseResponse
     {
         public ProcessInfo[] ProcessList { get; set; }
-        public bool Success { get; set; }
-        public string Error { get; set; }
     }
 
     public class OpenProcessRequest
@@ -29,9 +32,15 @@ namespace CeMCP.Models
         public string Process { get; set; }
     }
 
-    public class OpenProcessResponse
+    public class ThreadListResponse : BaseResponse
     {
-        public bool Success { get; set; }
-        public string Error { get; set; }
+        public string[] ThreadList { get; set; }
+    }
+
+    public class ProcessStatusResponse : BaseResponse
+    {
+        public int ProcessId { get; set; }
+        public bool IsOpen { get; set; }
+        public string ProcessName { get; set; }
     }
 }

@@ -12,7 +12,7 @@ namespace CeMCP.Tools
 
         public ProcessListTool(McpPlugin plugin)
         {
-            _plugin = plugin;
+            _plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
         }
 
         public ProcessListResponse GetProcessList()

@@ -10,16 +10,16 @@ namespace CeMCP.Tools
 
         public OpenProcessTool(McpPlugin plugin)
         {
-            _plugin = plugin;
+            _plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
         }
 
-        public OpenProcessResponse OpenProcess(OpenProcessRequest request)
+        public BaseResponse OpenProcess(OpenProcessRequest request)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(request.Process))
                 {
-                    return new OpenProcessResponse
+                    return new BaseResponse
                     {
                         Success = false,
                         Error = "Process parameter is required"
@@ -33,7 +33,7 @@ namespace CeMCP.Tools
                 {
                     if (pid <= 0)
                     {
-                        return new OpenProcessResponse
+                        return new BaseResponse
                         {
                             Success = false,
                             Error = "Process ID must be greater than 0"
@@ -50,7 +50,7 @@ namespace CeMCP.Tools
                 {
                     if (string.IsNullOrWhiteSpace(processValue))
                     {
-                        return new OpenProcessResponse
+                        return new BaseResponse
                         {
                             Success = false,
                             Error = "Process name cannot be empty"
@@ -81,7 +81,7 @@ namespace CeMCP.Tools
                 {
                     string error = lua.ToString(-1);
                     lua.Pop(1);
-                    return new OpenProcessResponse
+                    return new BaseResponse
                     {
                         Success = false,
                         Error = $"Lua execution failed: {error}"
@@ -96,7 +96,7 @@ namespace CeMCP.Tools
                 }
                 else if (lua.IsNumber(-1))
                 {
-                    success = lua.ToNumber(-1) != 0;
+                    success = Math.Abs(lua.ToNumber(-1)) > double.Epsilon;
                 }
 
                 // Clear the stack
@@ -104,14 +104,14 @@ namespace CeMCP.Tools
 
                 if (success)
                 {
-                    return new OpenProcessResponse
+                    return new BaseResponse
                     {
                         Success = true
                     };
                 }
                 else
                 {
-                    return new OpenProcessResponse
+                    return new BaseResponse
                     {
                         Success = false,
                         Error = $"Process not found or failed to open: {processValue}"
@@ -120,7 +120,7 @@ namespace CeMCP.Tools
             }
             catch (Exception ex)
             {
-                return new OpenProcessResponse
+                return new BaseResponse
                 {
                     Success = false,
                     Error = ex.Message

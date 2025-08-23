@@ -29,9 +29,23 @@ namespace CeMCP.Controllers
 
         [HttpPost]
         [Route("open-process")]
-        public OpenProcessResponse OpenProcess([FromBody] OpenProcessRequest request)
+        public BaseResponse OpenProcess([FromBody] OpenProcessRequest request)
         {
             return _tools.OpenProcess(request);
+        }
+
+        [HttpGet]
+        [Route("thread-list")]
+        public ThreadListResponse GetThreadList()
+        {
+            return _tools.GetThreadList();
+        }
+
+        [HttpGet]
+        [Route("process-status")]
+        public ProcessStatusResponse GetProcessStatus()
+        {
+            return _tools.GetProcessStatus();
         }
 
         [HttpGet]

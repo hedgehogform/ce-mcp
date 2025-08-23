@@ -10,7 +10,7 @@ namespace CeMCP.Tools
 
         public LuaExecutionTool(McpPlugin plugin)
         {
-            _plugin = plugin;
+            _plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
         }
 
         public LuaResponse ExecuteLua(LuaRequest request)

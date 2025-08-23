@@ -86,6 +86,48 @@ async def open_process(process: str) -> Dict[str, Any]:
         except httpx.HTTPStatusError as e:
             return {"success": False, "error": f"HTTP error: {e.response.status_code}"}
 
+@mcp.tool()
+async def get_thread_list() -> Dict[str, Any]:
+    """
+    Get list of threads for the currently opened process in Cheat Engine
+    
+    Returns:
+        Dictionary with thread list and success status
+    """
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{CHEAT_ENGINE_BASE_URL}/api/cheatengine/thread-list",
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.RequestError as e:
+            return {"thread_list": None, "success": False, "error": f"Request failed: {e}"}
+        except httpx.HTTPStatusError as e:
+            return {"thread_list": None, "success": False, "error": f"HTTP error: {e.response.status_code}"}
+
+@mcp.tool()
+async def get_process_status() -> Dict[str, Any]:
+    """
+    Get status of the currently opened process in Cheat Engine
+    
+    Returns:
+        Dictionary with process ID, open status, process name, and success status
+    """
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{CHEAT_ENGINE_BASE_URL}/api/cheatengine/process-status",
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.RequestError as e:
+            return {"process_id": 0, "is_open": False, "process_name": "", "success": False, "error": f"Request failed: {e}"}
+        except httpx.HTTPStatusError as e:
+            return {"process_id": 0, "is_open": False, "process_name": "", "success": False, "error": f"HTTP error: {e.response.status_code}"}
+
 @mcp.tool() 
 async def get_api_info() -> Dict[str, Any]:
     """
