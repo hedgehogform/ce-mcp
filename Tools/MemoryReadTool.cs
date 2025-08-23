@@ -1,6 +1,7 @@
 using System;
 using CESDK;
 using CeMCP.Models;
+using System.Collections.Generic;
 
 namespace CeMCP.Tools
 {
@@ -39,7 +40,7 @@ namespace CeMCP.Tools
 
                 var lua = _plugin.sdk.lua;
                 string luaFunction = GetLuaFunction(request.DataType);
-                
+
                 if (string.IsNullOrEmpty(luaFunction))
                 {
                     return new MemoryReadResponse
@@ -111,7 +112,7 @@ namespace CeMCP.Tools
 
                     // WideChar parameter is optional, defaults to false
                     string wideCharParam = request.WideChar.HasValue && request.WideChar.Value ? ", true" : "";
-                    
+
                     luaCode = $@"
                         local address = {request.Address}
                         local maxLength = {request.MaxLength.Value}
@@ -158,12 +159,12 @@ namespace CeMCP.Tools
 
                 // Get the result
                 object value = null;
-                
+
                 if (request.DataType.ToLower() == "bytes" || request.DataType.ToLower() == "byteslocal")
                 {
                     // Handle readBytes/readBytesLocal result (table or multiple values)
                     bool returnAsTable = request.ReturnAsTable ?? true;
-                    
+
                     if (returnAsTable && lua.IsTable(-1))
                     {
                         // Extract bytes from table
@@ -189,7 +190,7 @@ namespace CeMCP.Tools
                         // Handle multiple return values - collect all values on stack
                         var bytesList = new List<int>();
                         int stackSize = lua.GetTop();
-                        
+
                         for (int i = 1; i <= stackSize; i++)
                         {
                             if (lua.IsNumber(i))
