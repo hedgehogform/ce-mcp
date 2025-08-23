@@ -61,6 +61,31 @@ async def get_process_list() -> Dict[str, Any]:
         except httpx.HTTPStatusError as e:
             return {"process_list": None, "success": False, "error": f"HTTP error: {e.response.status_code}"}
 
+@mcp.tool()
+async def open_process(process: str) -> Dict[str, Any]:
+    """
+    Open a process in Cheat Engine by process ID or name
+    
+    Args:
+        process: Process ID (as string) or process name to open
+        
+    Returns:
+        Dictionary with success status and error message if any
+    """
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"{CHEAT_ENGINE_BASE_URL}/api/cheatengine/open-process",
+                json={"process": process},
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.RequestError as e:
+            return {"success": False, "error": f"Request failed: {e}"}
+        except httpx.HTTPStatusError as e:
+            return {"success": False, "error": f"HTTP error: {e.response.status_code}"}
+
 @mcp.tool() 
 async def get_api_info() -> Dict[str, Any]:
     """

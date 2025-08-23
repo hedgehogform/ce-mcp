@@ -23,4 +23,15 @@ namespace CeMCP.Models
         public bool Success { get; set; }
         public string Error { get; set; }
     }
+
+    public class OpenProcessRequest
+    {
+        public string Process { get; set; }
+    }
+
+    public class OpenProcessResponse
+    {
+        public bool Success { get; set; }
+        public string Error { get; set; }
+    }
 }

@@ -27,6 +27,13 @@ namespace CeMCP.Controllers
             return _tools.GetProcessList();
         }
 
+        [HttpPost]
+        [Route("open-process")]
+        public OpenProcessResponse OpenProcess([FromBody] OpenProcessRequest request)
+        {
+            return _tools.OpenProcess(request);
+        }
+
         [HttpGet]
         [Route("health")]
         public IHttpActionResult GetHealth()
