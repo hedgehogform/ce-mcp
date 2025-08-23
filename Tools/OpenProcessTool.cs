@@ -10,7 +10,7 @@ namespace CeMCP.Tools
 
         public OpenProcessTool(McpPlugin plugin)
         {
-            _plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
+            _plugin = plugin;
         }
 
         public OpenProcessResponse OpenProcess(OpenProcessRequest request)

@@ -59,11 +59,17 @@ The plugin follows a layered architecture:
 
 When adding new Cheat Engine functionality:
 
-1. Create a tool class in `Tools/` (e.g., `ProcessListTool.cs`)
+1. Create a tool class in `Tools/` (e.g., `ProcessListTool.cs`) - Study existing tools like `ProcessListTool.cs` to understand patterns for Lua execution, error handling, and stack management
 2. Add corresponding model classes in `Models/LuaModels.cs`
 3. Add method to `CheatEngineTools.cs`
 4. Add REST endpoint in `Controllers/CheatEngineController.cs`
 5. Add corresponding MCP tool function in `mcp-client/cheat_engine_mcp_server.py`
+
+**Important**: When implementing Lua functionality, examine existing tool implementations to understand:
+- Proper Lua error checking (check `DoString()` return value)
+- Stack management (`lua.SetTop(0)`, `lua.Pop()`)
+- How to handle different Lua return types (boolean, number, string, table)
+- When to use `return` in Lua code vs. when not to
 
 ### Python MCP Client
 
@@ -93,6 +99,7 @@ The HTTP server configuration is managed by `ServerConfig.cs`:
 2. **Plugin Testing**: Copy `ce-mcp.dll` from `bin/` to Cheat Engine plugins directory
 3. **Python Client Development**: Modify `cheat_engine_mcp_server.py` and test with MCP clients
 4. **API Testing**: Use Swagger UI at `http://localhost:6300/swagger` for endpoint testing
+5. **Git Workflow**: Always use `git add .` to stage all changes instead of individual file names
 
 ## Dependencies
 
