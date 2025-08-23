@@ -37,7 +37,7 @@ namespace CeMCP.Tools
 
                 var lua = _plugin.sdk.lua;
                 string luaFunction = GetLuaFunction(request.ConversionType);
-                
+
                 if (string.IsNullOrEmpty(luaFunction))
                 {
                     return new ConversionResponse
@@ -108,7 +108,7 @@ namespace CeMCP.Tools
             }
         }
 
-        private string GetLuaFunction(string conversionType)
+        private static string GetLuaFunction(string conversionType)
         {
             return conversionType.ToLower() switch
             {
