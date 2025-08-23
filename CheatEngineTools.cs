@@ -10,6 +10,12 @@ namespace CeMCP
         private readonly OpenProcessTool _openProcessTool;
         private readonly ThreadListTool _threadListTool;
         private readonly ProcessStatusTool _processStatusTool;
+        private readonly MemoryReadTool _memoryReadTool;
+        private readonly MemoryWriteTool _memoryWriteTool;
+        private readonly ConversionTool _conversionTool;
+        private readonly AOBScanTool _aobScanTool;
+        private readonly DisassembleTool _disassembleTool;
+        private readonly GetInstructionSizeTool _getInstructionSizeTool;
 
         public CheatEngineTools(McpPlugin plugin)
         {
@@ -18,6 +24,12 @@ namespace CeMCP
             _openProcessTool = new OpenProcessTool(plugin);
             _threadListTool = new ThreadListTool(plugin);
             _processStatusTool = new ProcessStatusTool(plugin);
+            _memoryReadTool = new MemoryReadTool(plugin);
+            _memoryWriteTool = new MemoryWriteTool(plugin);
+            _conversionTool = new ConversionTool(plugin);
+            _aobScanTool = new AOBScanTool(plugin);
+            _disassembleTool = new DisassembleTool(plugin);
+            _getInstructionSizeTool = new GetInstructionSizeTool(plugin);
         }
 
         public LuaResponse ExecuteLua(LuaRequest request)
@@ -43,6 +55,36 @@ namespace CeMCP
         public ProcessStatusResponse GetProcessStatus()
         {
             return _processStatusTool.GetProcessStatus();
+        }
+
+        public MemoryReadResponse ReadMemory(MemoryReadRequest request)
+        {
+            return _memoryReadTool.ReadMemory(request);
+        }
+
+        public BaseResponse WriteMemory(MemoryWriteRequest request)
+        {
+            return _memoryWriteTool.WriteMemory(request);
+        }
+
+        public ConversionResponse Convert(ConversionRequest request)
+        {
+            return _conversionTool.Convert(request);
+        }
+
+        public AOBScanResponse AOBScan(AOBScanRequest request)
+        {
+            return _aobScanTool.AOBScan(request);
+        }
+
+        public DisassembleResponse Disassemble(DisassembleRequest request)
+        {
+            return _disassembleTool.Disassemble(request);
+        }
+
+        public GetInstructionSizeResponse GetInstructionSize(GetInstructionSizeRequest request)
+        {
+            return _getInstructionSizeTool.GetInstructionSize(request);
         }
     }
 }

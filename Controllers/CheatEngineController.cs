@@ -48,6 +48,48 @@ namespace CeMCP.Controllers
             return _tools.GetProcessStatus();
         }
 
+        [HttpPost]
+        [Route("read-memory")]
+        public MemoryReadResponse ReadMemory([FromBody] MemoryReadRequest request)
+        {
+            return _tools.ReadMemory(request);
+        }
+
+        [HttpPost]
+        [Route("write-memory")]
+        public BaseResponse WriteMemory([FromBody] MemoryWriteRequest request)
+        {
+            return _tools.WriteMemory(request);
+        }
+
+        [HttpPost]
+        [Route("convert")]
+        public ConversionResponse Convert([FromBody] ConversionRequest request)
+        {
+            return _tools.Convert(request);
+        }
+
+        [HttpPost]
+        [Route("aob-scan")]
+        public AOBScanResponse AOBScan([FromBody] AOBScanRequest request)
+        {
+            return _tools.AOBScan(request);
+        }
+
+        [HttpPost]
+        [Route("disassemble")]
+        public DisassembleResponse Disassemble([FromBody] DisassembleRequest request)
+        {
+            return _tools.Disassemble(request);
+        }
+
+        [HttpPost]
+        [Route("get-instruction-size")]
+        public GetInstructionSizeResponse GetInstruction([FromBody] GetInstructionSizeRequest request)
+        {
+            return _tools.GetInstructionSize(request);
+        }
+
         [HttpGet]
         [Route("health")]
         public IHttpActionResult GetHealth()

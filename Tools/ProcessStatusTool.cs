@@ -134,7 +134,7 @@ namespace CeMCP.Tools
             }
         }
 
-        private string GetProcessNameFromPid(int processId)
+        private static string GetProcessNameFromPid(int processId)
         {
             try
             {

@@ -100,6 +100,645 @@ async def get_process_status() -> Dict[str, Any]:
     """
     return await make_request("process-status")
 
+@mcp.tool()
+async def read_bytes(address: str, byte_count: int, return_as_table: bool = True) -> Dict[str, Any]:
+    """
+    Read bytes from memory at the specified address in the currently opened process
+    
+    Args:
+        address: Memory address to read from (as string, can be hex like "0x12345" or decimal)
+        byte_count: Number of bytes to read
+        return_as_table: If True, returns bytes as array. If False, returns multiple values
+        
+    Returns:
+        Dictionary with bytes array/values and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "bytes", 
+        "byteCount": byte_count,
+        "returnAsTable": return_as_table
+    })
+
+@mcp.tool()
+async def read_bytes_local(address: str, byte_count: int, return_as_table: bool = True) -> Dict[str, Any]:
+    """
+    Read bytes from memory at the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to read from in CE's memory (as string, can be hex like "0x12345" or decimal)
+        byte_count: Number of bytes to read
+        return_as_table: If True, returns bytes as array. If False, returns multiple values
+        
+    Returns:
+        Dictionary with bytes array/values and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "byteslocal", 
+        "byteCount": byte_count,
+        "returnAsTable": return_as_table
+    })
+
+@mcp.tool()
+async def read_small_integer(address: str, signed: bool = False) -> Dict[str, Any]:
+    """
+    Read a 16-bit integer (small integer) from the specified address in the target process
+    
+    Args:
+        address: Memory address to read from (as string, can be hex like "0x12345" or decimal)
+        signed: If True, interpret value as signed. If False, interpret as unsigned.
+        
+    Returns:
+        Dictionary with integer value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "smallinteger", 
+        "signed": signed
+    })
+
+@mcp.tool()
+async def read_small_integer_local(address: str) -> Dict[str, Any]:
+    """
+    Read a 16-bit integer from the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to read from in CE's memory (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with integer value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "smallintegerlocal"
+    })
+
+@mcp.tool()
+async def read_integer(address: str, signed: bool = False) -> Dict[str, Any]:
+    """
+    Read a 32-bit integer from the specified address in the target process
+    
+    Args:
+        address: Memory address to read from (as string, can be hex like "0x12345" or decimal)
+        signed: If True, interpret value as signed. If False, interpret as unsigned.
+        
+    Returns:
+        Dictionary with integer value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "integer", 
+        "signed": signed
+    })
+
+@mcp.tool()
+async def read_integer_local(address: str, signed: bool = False) -> Dict[str, Any]:
+    """
+    Read a 32-bit integer from the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to read from in CE's memory (as string, can be hex like "0x12345" or decimal)
+        signed: If True, interpret value as signed. If False, interpret as unsigned.
+        
+    Returns:
+        Dictionary with integer value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "integerlocal", 
+        "signed": signed
+    })
+
+@mcp.tool()
+async def read_qword(address: str) -> Dict[str, Any]:
+    """
+    Read a 64-bit integer from the specified address in the target process
+    
+    Args:
+        address: Memory address to read from (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with integer value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "qword"
+    })
+
+@mcp.tool()
+async def read_qword_local(address: str) -> Dict[str, Any]:
+    """
+    Read a 64-bit integer from the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to read from in CE's memory (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with integer value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "qwordlocal"
+    })
+
+@mcp.tool()
+async def read_pointer(address: str) -> Dict[str, Any]:
+    """
+    Read a pointer-sized integer from the specified address in the target process
+    
+    Args:
+        address: Memory address to read from (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with pointer value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "pointer"
+    })
+
+@mcp.tool()
+async def read_pointer_local(address: str) -> Dict[str, Any]:
+    """
+    Read a pointer-sized integer from the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to read from in CE's memory (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with pointer value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "pointerlocal"
+    })
+
+@mcp.tool()
+async def read_float(address: str) -> Dict[str, Any]:
+    """
+    Read a single precision (32-bit) floating point value from the specified address in the target process
+    
+    Args:
+        address: Memory address to read from (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with float value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "float"
+    })
+
+@mcp.tool()
+async def read_float_local(address: str) -> Dict[str, Any]:
+    """
+    Read a single precision (32-bit) floating point value from the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to read from in CE's memory (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with float value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "floatlocal"
+    })
+
+@mcp.tool()
+async def read_double(address: str) -> Dict[str, Any]:
+    """
+    Read a double precision (64-bit) floating point value from the specified address in the target process
+    
+    Args:
+        address: Memory address to read from (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with double value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "double"
+    })
+
+@mcp.tool()
+async def read_double_local(address: str) -> Dict[str, Any]:
+    """
+    Read a double precision (64-bit) floating point value from the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to read from in CE's memory (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with double value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "doublelocal"
+    })
+
+@mcp.tool()
+async def read_string(address: str, max_length: int, wide_char: bool = False) -> Dict[str, Any]:
+    """
+    Read a string from the specified address in the target process
+    
+    Args:
+        address: Memory address to read from (as string, can be hex like "0x12345" or decimal)
+        max_length: Maximum number of characters to read
+        wide_char: If True, read as widechar (UTF-16/Unicode). If False, read as ASCII/ANSI.
+        
+    Returns:
+        Dictionary with string value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "string", 
+        "maxLength": max_length,
+        "wideChar": wide_char
+    })
+
+@mcp.tool()
+async def read_string_local(address: str, max_length: int, wide_char: bool = False) -> Dict[str, Any]:
+    """
+    Read a string from the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to read from in CE's memory (as string, can be hex like "0x12345" or decimal)
+        max_length: Maximum number of characters to read
+        wide_char: If True, read as widechar (UTF-16/Unicode). If False, read as ASCII/ANSI.
+        
+    Returns:
+        Dictionary with string value and success status
+    """
+    return await make_request("read-memory", "POST", {
+        "address": address, 
+        "dataType": "stringlocal", 
+        "maxLength": max_length,
+        "wideChar": wide_char
+    })
+
+@mcp.tool()
+async def write_bytes(address: str, byte_values: list) -> Dict[str, Any]:
+    """
+    Write bytes to memory at the specified address in the currently opened process
+    
+    Args:
+        address: Memory address to write to (as string, can be hex like "0x12345" or decimal)
+        byte_values: List of byte values to write (integers 0-255)
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "bytes", 
+        "byteValues": byte_values
+    })
+
+@mcp.tool()
+async def write_bytes_local(address: str, byte_values: list) -> Dict[str, Any]:
+    """
+    Write bytes to memory at the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to write to in CE's memory (as string, can be hex like "0x12345" or decimal)
+        byte_values: List of byte values to write (integers 0-255)
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "byteslocal", 
+        "byteValues": byte_values
+    })
+
+@mcp.tool()
+async def write_small_integer(address: str, value: int) -> Dict[str, Any]:
+    """
+    Write a 16-bit integer to the specified address in the target process
+    
+    Args:
+        address: Memory address to write to (as string, can be hex like "0x12345" or decimal)
+        value: The 16-bit integer value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "smallinteger", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_small_integer_local(address: str, value: int) -> Dict[str, Any]:
+    """
+    Write a 16-bit integer to the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to write to in CE's memory (as string, can be hex like "0x12345" or decimal)
+        value: The 16-bit integer value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "smallintegerlocal", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_integer(address: str, value: int) -> Dict[str, Any]:
+    """
+    Write a 32-bit integer to the specified address in the target process
+    
+    Args:
+        address: Memory address to write to (as string, can be hex like "0x12345" or decimal)
+        value: The 32-bit integer value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "integer", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_integer_local(address: str, value: int) -> Dict[str, Any]:
+    """
+    Write a 32-bit integer to the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to write to in CE's memory (as string, can be hex like "0x12345" or decimal)
+        value: The 32-bit integer value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "integerlocal", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_qword(address: str, value: int) -> Dict[str, Any]:
+    """
+    Write a 64-bit integer to the specified address in the target process
+    
+    Args:
+        address: Memory address to write to (as string, can be hex like "0x12345" or decimal)
+        value: The 64-bit integer value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "qword", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_qword_local(address: str, value: int) -> Dict[str, Any]:
+    """
+    Write a 64-bit integer to the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to write to in CE's memory (as string, can be hex like "0x12345" or decimal)
+        value: The 64-bit integer value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "qwordlocal", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_float(address: str, value: float) -> Dict[str, Any]:
+    """
+    Write a single precision (32-bit) floating point value to the specified address in the target process
+    
+    Args:
+        address: Memory address to write to (as string, can be hex like "0x12345" or decimal)
+        value: The single precision floating point value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "float", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_float_local(address: str, value: float) -> Dict[str, Any]:
+    """
+    Write a single precision (32-bit) floating point value to the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to write to in CE's memory (as string, can be hex like "0x12345" or decimal)
+        value: The single precision floating point value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "floatlocal", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_double(address: str, value: float) -> Dict[str, Any]:
+    """
+    Write a double precision (64-bit) floating point value to the specified address in the target process
+    
+    Args:
+        address: Memory address to write to (as string, can be hex like "0x12345" or decimal)
+        value: The double precision floating point value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "double", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_double_local(address: str, value: float) -> Dict[str, Any]:
+    """
+    Write a double precision (64-bit) floating point value to the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to write to in CE's memory (as string, can be hex like "0x12345" or decimal)
+        value: The double precision floating point value to write
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "doublelocal", 
+        "value": value
+    })
+
+@mcp.tool()
+async def write_string(address: str, text: str, wide_char: bool = False) -> Dict[str, Any]:
+    """
+    Write a string to the specified address in the target process
+    
+    Args:
+        address: Memory address to write to (as string, can be hex like "0x12345" or decimal)
+        text: The string to write
+        wide_char: If True, write as widechar (UTF-16/Unicode). If False, write as ASCII/ANSI.
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "string", 
+        "value": text,
+        "wideChar": wide_char
+    })
+
+@mcp.tool()
+async def write_string_local(address: str, text: str, wide_char: bool = False) -> Dict[str, Any]:
+    """
+    Write a string to the specified address in Cheat Engine's own process memory
+    
+    Args:
+        address: Memory address to write to in CE's memory (as string, can be hex like "0x12345" or decimal)
+        text: The string to write
+        wide_char: If True, write as widechar (UTF-16/Unicode). If False, write as ASCII/ANSI.
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("write-memory", "POST", {
+        "address": address, 
+        "dataType": "stringlocal", 
+        "value": text,
+        "wideChar": wide_char
+    })
+
+@mcp.tool()
+async def ansi_to_utf8(text: str) -> Dict[str, Any]:
+    """
+    Convert a string from ANSI encoding to UTF-8
+    
+    Args:
+        text: The string to convert from ANSI encoding
+        
+    Returns:
+        Dictionary with converted UTF-8 string and success status
+    """
+    return await make_request("convert", "POST", {
+        "input": text,
+        "conversionType": "ansitoutf8"
+    })
+
+@mcp.tool()
+async def utf8_to_ansi(text: str) -> Dict[str, Any]:
+    """
+    Convert a string from UTF-8 encoding to ANSI
+    
+    Args:
+        text: The string to convert from UTF-8 encoding
+        
+    Returns:
+        Dictionary with converted ANSI string and success status
+    """
+    return await make_request("convert", "POST", {
+        "input": text,
+        "conversionType": "utf8toansi"
+    })
+
+@mcp.tool()
+async def string_to_md5(text: str) -> Dict[str, Any]:
+    """
+    Generate MD5 hash from the provided string
+    
+    Args:
+        text: The string to hash
+        
+    Returns:
+        Dictionary with MD5 hash string and success status
+    """
+    return await make_request("convert", "POST", {
+        "input": text,
+        "conversionType": "md5"
+    })
+
+@mcp.tool()
+async def aob_scan(aob_string: str, protection_flags: str = None, alignment_type: int = None, alignment_param: str = None) -> Dict[str, Any]:
+    """
+    Scan the currently opened process for an Array of Bytes (AOB) pattern
+    
+    Args:
+        aob_string: A string of bytes, as hex, to scan for (e.g., "48 8B 05 ? ? ? ?")
+        protection_flags: Optional protection flags (+W = writable, +X = executable, -C = not copy-on-write)
+        alignment_type: Optional alignment type (0=none, 1=divisible by param, 2=address ends with param)
+        alignment_param: Optional alignment parameter (value for alignment check)
+        
+    Returns:
+        Dictionary with array of found addresses and success status
+    """
+    data = {"aobString": aob_string}
+    
+    if protection_flags is not None:
+        data["protectionFlags"] = protection_flags
+    if alignment_type is not None:
+        data["alignmentType"] = alignment_type
+    if alignment_param is not None:
+        data["alignmentParam"] = alignment_param
+    
+    return await make_request("aob-scan", "POST", data)
+
+@mcp.tool()
+async def disassemble(address: str) -> Dict[str, Any]:
+    """
+    Disassemble the instruction at the given address
+    
+    Args:
+        address: The address to disassemble (as string, can be hex like "0x12345" or decimal)
+        
+    Returns:
+        Dictionary with disassembled instruction string and success status
+        Format: "address - bytes - opcode : extra"
+    """
+    return await make_request("disassemble", "POST", {
+        "address": address
+    })
+
+@mcp.tool()
+async def get_instruction_size(address: str) -> Dict[str, Any]:
+    """
+    Returns the size of an instruction (basically it disassembles the instruction and 
+    returns the number of bytes for you).
+    
+    Args:
+        address: CEAddressString or Integer (e.g. "game.exe+1234" or "8")
+        
+    Returns:
+        Dictionary with success status, size, and error message if any
+    """
+    return await make_request("get-instruction-size", "POST", {
+        "address": address
+    })
+
 @mcp.tool() 
 async def get_api_info() -> Dict[str, Any]:
     """
