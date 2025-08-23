@@ -12,6 +12,7 @@ namespace CeMCP.Models
         private string _serverStatus = "Stopped";
         private Brush _serverStatusColor = Brushes.Red;
         private string _testResult = "";
+        private bool _isServerRunning = false;
 
         public string Host
         {
@@ -56,7 +57,22 @@ namespace CeMCP.Models
 
         public string BaseUrl => $"http://{Host}:{Port}";
 
+        public string SwaggerUrl => $"{BaseUrl}/swagger";
+
         public string StartStopButtonText => ServerStatus.ToLower() == "running" ? "Stop Server" : "Start Server";
+
+        public bool IsServerRunning
+        {
+            get => _isServerRunning;
+            set
+            {
+                if (_isServerRunning != value)
+                {
+                    _isServerRunning = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public string ServerStatus
         {
@@ -77,6 +93,8 @@ namespace CeMCP.Models
                         "stopping" => Brushes.Orange,
                         _ => Brushes.Gray
                     };
+                    
+                    IsServerRunning = value.ToLower() == "running";
                     OnPropertyChanged(nameof(StartStopButtonText));
                 }
             }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
@@ -113,6 +114,24 @@ namespace CeMCP
             }
         }
 
+        private void OpenSwaggerButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var url = _viewModel.SwaggerUrl;
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+                _viewModel.TestResult = $"Opening Swagger UI in browser: {url}";
+            }
+            catch (Exception ex)
+            {
+                _viewModel.TestResult = $"Error opening Swagger UI: {ex.Message}";
+            }
+        }
+
         public void ApplyTheme(bool isDarkMode)
         {
             var textBoxStyle = isDarkMode ? "DarkTextBoxStyle" : "LightTextBoxStyle";
@@ -165,6 +184,7 @@ namespace CeMCP
                 SaveButton.Style = btnStyle;
                 TestButton.Style = btnStyle;
                 StartStopButton.Style = btnStyle;
+                OpenSwaggerButton.Style = btnStyle;
             }
         }
     }
