@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using CESDK;
 using CeMCP.Models;
 
@@ -7,21 +6,15 @@ namespace CeMCP.Tools
 {
     public class MemoryWriteTool
     {
-        private readonly McpPlugin _plugin;
-
-        public MemoryWriteTool(McpPlugin plugin)
-        {
-            _plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
-        }
-
-        public BaseResponse WriteMemory(MemoryWriteRequest request)
+        public MemoryWriteResponse WriteMemory(MemoryWriteRequest request)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(request.Address))
                 {
-                    return new BaseResponse
+                    return new MemoryWriteResponse
                     {
+                        Value = null,
                         Success = false,
                         Error = "Address parameter is required"
                     };
@@ -29,172 +22,157 @@ namespace CeMCP.Tools
 
                 if (string.IsNullOrWhiteSpace(request.DataType))
                 {
-                    return new BaseResponse
+                    return new MemoryWriteResponse
                     {
+                        Value = null,
                         Success = false,
                         Error = "DataType parameter is required"
                     };
                 }
 
-                var lua = _plugin.sdk.lua;
-                string luaFunction = GetLuaFunction(request.DataType);
-                
-                if (string.IsNullOrEmpty(luaFunction))
-                {
-                    return new BaseResponse
-                    {
-                        Success = false,
-                        Error = $"Unsupported data type: {request.DataType}"
-                    };
-                }
+                var memoryWrite = new MemoryWrite();
+                object value = null;
 
-                // Build Lua code to write the memory value
-                string luaCode;
-                if (request.DataType.ToLower() == "bytes" || request.DataType.ToLower() == "byteslocal")
+                switch (request.DataType.ToLower())
                 {
-                    // writeBytes/writeBytesLocal(Address, Byte1, [Byte2, ...]) or writeBytes/writeBytesLocal(Address, Table)
-                    if (request.ByteValues == null || request.ByteValues.Length == 0)
-                    {
-                        return new BaseResponse
+                    case "bytes":
+                        if (request.ByteCount == null || request.ByteCount.Value <= 0)
                         {
-                            Success = false,
-                            Error = $"ByteValues parameter is required for {request.DataType} and must not be empty"
-                        };
-                    }
+                            return new MemoryWriteResponse
+                            {
+                                Value = null,
+                                Success = false,
+                                Error = "ByteCount parameter is required for bytes and must be greater than 0"
+                            };
+                        }
 
-                    // Use table format for writeBytes/writeBytesLocal
-                    string bytesTable = "{" + string.Join(", ", request.ByteValues) + "}";
-                    luaCode = $@"
-                        local address = {request.Address}
-                        local bytesTable = {bytesTable}
-                        local success, result = pcall(function()
-                            return {luaFunction}(address, bytesTable)
-                        end)
-                        
-                        if success then
-                            return true
-                        else
-                            return false
-                        end
-                    ";
-                }
-                else if (request.DataType.ToLower() == "string" || request.DataType.ToLower() == "stringlocal")
-                {
-                    // writeString/writeStringLocal requires Text parameter and optional WideChar
-                    if (request.Value == null || string.IsNullOrWhiteSpace(request.Value.ToString()))
-                    {
-                        return new BaseResponse
+                        // Create an int[] of zeros with length ByteCount
+                        int[] bytes = new int[request.ByteCount.Value];
+                        memoryWrite.WriteBytes(request.Address, bytes);
+                        value = bytes;
+                        break;
+
+                    case "integer":
+                    case "int32":
+                    case "int":
+                        if (request.Value == null)
+                            return new MemoryWriteResponse
+                            {
+                                Value = null,
+                                Success = false,
+                                Error = "Value is required for integer write"
+                            };
+
+                        if (!int.TryParse(request.Value.ToString(), out int intValue))
                         {
-                            Success = false,
-                            Error = $"Value parameter is required for {request.DataType} and must not be empty"
-                        };
-                    }
+                            return new MemoryWriteResponse
+                            {
+                                Value = null,
+                                Success = false,
+                                Error = "Value must be a valid integer"
+                            };
+                        }
 
-                    // WideChar parameter is optional, defaults to false
-                    string wideCharParam = request.WideChar.HasValue && request.WideChar.Value ? ", true" : "";
-                    string textValue = request.Value.ToString().Replace("\"", "\\\"");
-                    
-                    luaCode = $@"
-                        local address = {request.Address}
-                        local text = ""{textValue}""
-                        local success, result = pcall(function()
-                            return {luaFunction}(address, text{wideCharParam})
-                        end)
-                        
-                        if success then
-                            return true
-                        else
-                            return false
-                        end
-                    ";
-                }
-                else
-                {
-                    // Standard write functions
-                    if (request.Value == null)
-                    {
-                        return new BaseResponse
+                        memoryWrite.WriteInteger(request.Address, intValue);
+                        value = intValue;
+                        break;
+
+                    case "qword":
+                    case "int64":
+                    case "long":
+                        if (request.Value == null)
+                            return new MemoryWriteResponse
+                            {
+                                Value = null,
+                                Success = false,
+                                Error = "Value is required for qword write"
+                            };
+
+                        if (!long.TryParse(request.Value.ToString(), out long longValue))
                         {
+                            return new MemoryWriteResponse
+                            {
+                                Value = null,
+                                Success = false,
+                                Error = "Value must be a valid long"
+                            };
+                        }
+
+                        memoryWrite.WriteQword(request.Address, longValue);
+                        value = longValue;
+                        break;
+
+                    case "float":
+                        if (request.Value == null)
+                            return new MemoryWriteResponse
+                            {
+                                Value = null,
+                                Success = false,
+                                Error = "Value is required for float write"
+                            };
+
+                        if (!float.TryParse(request.Value.ToString(), out float floatValue))
+                        {
+                            return new MemoryWriteResponse
+                            {
+                                Value = null,
+                                Success = false,
+                                Error = "Value must be a valid float"
+                            };
+                        }
+
+                        memoryWrite.WriteFloat(request.Address, floatValue);
+                        value = floatValue;
+                        break;
+
+                    case "string":
+                        if (string.IsNullOrEmpty(request.Value?.ToString()))
+                        {
+                            return new MemoryWriteResponse
+                            {
+                                Value = null,
+                                Success = false,
+                                Error = "String value is required"
+                            };
+                        }
+
+                        // Truncate string if MaxLength is set
+                        string text = request.Value.ToString();
+                        if (request.MaxLength.HasValue && text.Length > request.MaxLength.Value)
+                        {
+                            text = text[..request.MaxLength.Value];
+                        }
+
+                        memoryWrite.WriteString(request.Address, text, request.WideChar ?? false);
+                        value = text;
+                        break;
+
+
+                    default:
+                        return new MemoryWriteResponse
+                        {
+                            Value = null,
                             Success = false,
-                            Error = $"Value parameter is required for {request.DataType}"
+                            Error = $"Unsupported data type: {request.DataType}"
                         };
-                    }
-
-                    luaCode = $@"
-                        local address = {request.Address}
-                        local value = {request.Value}
-                        local success, result = pcall(function()
-                            return {luaFunction}(address, value)
-                        end)
-                        
-                        if success then
-                            return true
-                        else
-                            return false
-                        end
-                    ";
                 }
 
-                int luaResult = lua.DoString(luaCode);
-                if (luaResult != 0)
+                return new MemoryWriteResponse
                 {
-                    string error = lua.ToString(-1);
-                    lua.Pop(1);
-                    return new BaseResponse
-                    {
-                        Success = false,
-                        Error = $"Lua execution failed: {error}"
-                    };
-                }
-
-                // Get the result
-                bool success = false;
-                if (lua.IsBoolean(-1))
-                {
-                    success = lua.ToBoolean(-1);
-                }
-                else if (lua.IsNumber(-1))
-                {
-                    success = Math.Abs(lua.ToNumber(-1)) > double.Epsilon;
-                }
-
-                lua.Pop(1);
-
-                return new BaseResponse
-                {
-                    Success = success
+                    Value = value,
+                    Success = true,
+                    Error = null
                 };
             }
             catch (Exception ex)
             {
-                return new BaseResponse
+                return new MemoryWriteResponse
                 {
+                    Value = null,
                     Success = false,
                     Error = ex.Message
                 };
             }
-        }
-
-        private string GetLuaFunction(string dataType)
-        {
-            return dataType.ToLower() switch
-            {
-                "bytes" => "writeBytes",
-                "byteslocal" => "writeBytesLocal",
-                "smallinteger" or "int16" or "short" => "writeSmallInteger",
-                "smallintegerlocal" or "int16local" or "shortlocal" => "writeSmallIntegerLocal",
-                "integer" or "int32" or "int" => "writeInteger",
-                "integerlocal" or "int32local" or "intlocal" => "writeIntegerLocal",
-                "qword" or "int64" or "long" => "writeQword",
-                "qwordlocal" or "int64local" or "longlocal" => "writeQwordLocal",
-                "float" => "writeFloat",
-                "floatlocal" => "writeFloatLocal",
-                "double" => "writeDouble",
-                "doublelocal" => "writeDoubleLocal",
-                "string" => "writeString",
-                "stringlocal" => "writeStringLocal",
-                _ => null
-            };
         }
     }
 }

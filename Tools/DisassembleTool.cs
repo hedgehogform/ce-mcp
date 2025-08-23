@@ -6,81 +6,52 @@ namespace CeMCP.Tools
 {
     public class DisassembleTool
     {
-        private readonly McpPlugin _plugin;
-
-        public DisassembleTool(McpPlugin plugin)
-        {
-            _plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
-        }
-
-        public DisassembleResponse Disassemble(DisassembleRequest request)
+        public DisassemblerResponse Disassemble(DisassemblerRequest request)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(request.Address))
                 {
-                    return new DisassembleResponse
+                    return new DisassemblerResponse
                     {
                         Success = false,
                         Error = "Address parameter is required"
                     };
                 }
 
-                var lua = _plugin.sdk.lua;
+                var disassembler = new Disassembler();
+                string result;
 
-                // Build Lua code to disassemble the address
-                string luaCode = $@"
-                    local address = {request.Address}
-                    local success, result = pcall(function()
-                        return disassemble(address)
-                    end)
-                    
-                    if success then
-                        return result
-                    else
-                        return nil
-                    end
-                ";
-
-                int luaResult = lua.DoString(luaCode);
-                if (luaResult != 0)
+                switch (request.RequestType?.ToLower())
                 {
-                    string error = lua.ToString(-1);
-                    lua.Pop(1);
-                    return new DisassembleResponse
-                    {
-                        Success = false,
-                        Error = $"Lua execution failed: {error}"
-                    };
+                    case "get-instruction-size":
+                        int size = disassembler.GetInstructionSize(request.Address);
+                        result = size.ToString();
+                        break;
+
+                    case "disassemble":
+                    case null:
+                    case "":
+                        result = disassembler.Disassemble(request.Address);
+                        break;
+
+                    default:
+                        return new DisassemblerResponse
+                        {
+                            Success = false,
+                            Error = $"Unsupported RequestType: {request.RequestType}"
+                        };
                 }
 
-                // Get the result
-                string disassembly = null;
-                if (lua.IsString(-1))
-                {
-                    disassembly = lua.ToString(-1);
-                }
-                else if (lua.IsNil(-1))
-                {
-                    lua.Pop(1);
-                    return new DisassembleResponse
-                    {
-                        Success = false,
-                        Error = "Failed to disassemble address"
-                    };
-                }
-
-                lua.Pop(1);
-
-                return new DisassembleResponse
+                return new DisassemblerResponse
                 {
                     Success = true,
-                    Disassembly = disassembly
+                    Output = result
                 };
             }
             catch (Exception ex)
             {
-                return new DisassembleResponse
+                return new DisassemblerResponse
                 {
                     Success = false,
                     Error = ex.Message

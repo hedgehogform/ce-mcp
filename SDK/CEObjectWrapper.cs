@@ -9,8 +9,8 @@ namespace CESDK
     /// <summary>
     /// Base class for implementing objects inherited from TObject  (just a destructor in this case)
     /// </summary>
-    class CEObjectWrapper
-    {        
+    public class CEObjectWrapper
+    {
         protected CESDKLua lua = CESDK.currentPlugin.sdk.lua;
         protected IntPtr CEObject;
         public IntPtr obj { get { return CEObject; } }

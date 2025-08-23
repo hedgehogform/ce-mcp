@@ -6,13 +6,6 @@ namespace CeMCP.Tools
 {
     public class LuaExecutionTool
     {
-        private readonly McpPlugin _plugin;
-
-        public LuaExecutionTool(McpPlugin plugin)
-        {
-            _plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
-        }
-
         public LuaResponse ExecuteLua(LuaRequest request)
         {
             try
@@ -26,28 +19,8 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var lua = _plugin.sdk.lua;
-                
-                // Execute the Lua code
-                var executionResult = lua.DoString(request.Code);
-                
-                // Check if there are any return values on the stack
-                int stackSize = lua.GetTop();
-                string result;
-                
-                if (stackSize > 0)
-                {
-                    // Get the top value from the stack as a string
-                    result = lua.ToString(-1);
-                    
-                    // Clear the stack
-                    lua.SetTop(0);
-                }
-                else
-                {
-                    // No return value, just indicate success
-                    result = executionResult.ToString();
-                }
+                var luaExecution = new LuaExecution();
+                string result = luaExecution.ExecuteCode(request.Code);
 
                 return new LuaResponse
                 {

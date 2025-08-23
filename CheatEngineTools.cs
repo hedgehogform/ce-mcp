@@ -1,36 +1,20 @@
 using CeMCP.Models;
 using CeMCP.Tools;
+using CESDK;
 
 namespace CeMCP
 {
-    public class CheatEngineTools
+    public class CheatEngineTools()
     {
-        private readonly LuaExecutionTool _luaExecutionTool;
-        private readonly ProcessListTool _processListTool;
-        private readonly OpenProcessTool _openProcessTool;
-        private readonly ThreadListTool _threadListTool;
-        private readonly ProcessStatusTool _processStatusTool;
-        private readonly MemoryReadTool _memoryReadTool;
-        private readonly MemoryWriteTool _memoryWriteTool;
-        private readonly ConversionTool _conversionTool;
-        private readonly AOBScanTool _aobScanTool;
-        private readonly DisassembleTool _disassembleTool;
-        private readonly GetInstructionSizeTool _getInstructionSizeTool;
-
-        public CheatEngineTools(McpPlugin plugin)
-        {
-            _luaExecutionTool = new LuaExecutionTool(plugin);
-            _processListTool = new ProcessListTool(plugin);
-            _openProcessTool = new OpenProcessTool(plugin);
-            _threadListTool = new ThreadListTool(plugin);
-            _processStatusTool = new ProcessStatusTool(plugin);
-            _memoryReadTool = new MemoryReadTool(plugin);
-            _memoryWriteTool = new MemoryWriteTool(plugin);
-            _conversionTool = new ConversionTool(plugin);
-            _aobScanTool = new AOBScanTool(plugin);
-            _disassembleTool = new DisassembleTool(plugin);
-            _getInstructionSizeTool = new GetInstructionSizeTool(plugin);
-        }
+        private readonly LuaExecutionTool _luaExecutionTool = new();
+        private readonly ProcessTool _processTool = new();
+        private readonly ThreadListTool _threadListTool = new();
+        private readonly MemoryReadTool _memoryReadTool = new();
+        private readonly MemoryWriteTool _memoryWriteTool = new();
+        private readonly ConversionTool _conversionTool = new();
+        private readonly AobScanTool _aobScanTool = new();
+        private readonly DisassembleTool _disassembleTool = new();
+        private readonly MemScanTool _memScanTool = new();
 
         public LuaResponse ExecuteLua(LuaRequest request)
         {
@@ -39,12 +23,12 @@ namespace CeMCP
 
         public ProcessListResponse GetProcessList()
         {
-            return _processListTool.GetProcessList();
+            return _processTool.GetProcessList();
         }
 
         public BaseResponse OpenProcess(OpenProcessRequest request)
         {
-            return _openProcessTool.OpenProcess(request);
+            return _processTool.OpenProcess(request);
         }
 
         public ThreadListResponse GetThreadList()
@@ -54,7 +38,7 @@ namespace CeMCP
 
         public ProcessStatusResponse GetProcessStatus()
         {
-            return _processStatusTool.GetProcessStatus();
+            return _processTool.GetProcessStatus();
         }
 
         public MemoryReadResponse ReadMemory(MemoryReadRequest request)
@@ -72,19 +56,26 @@ namespace CeMCP
             return _conversionTool.Convert(request);
         }
 
-        public AOBScanResponse AOBScan(AOBScanRequest request)
+        public AobScanResponse AOBScan(AobScanRequest request)
         {
             return _aobScanTool.AOBScan(request);
         }
 
-        public DisassembleResponse Disassemble(DisassembleRequest request)
+        public DisassemblerResponse Disassemble(DisassemblerRequest request)
         {
             return _disassembleTool.Disassemble(request);
         }
 
-        public GetInstructionSizeResponse GetInstructionSize(GetInstructionSizeRequest request)
+        public MemScanResponse Scan(MemScanScanRequest request)
         {
-            return _getInstructionSizeTool.GetInstructionSize(request);
+            _memScanTool.StartScan(request);
+            _memScanTool.WaitForScan();
+
+
+            return new MemScanResponse
+            {
+                FoundList = _memScanTool.GetFoundList()
+            };
         }
     }
 }

@@ -11,7 +11,7 @@ using System.Reflection;
 
 namespace CESDK
 {
- 
+
     public abstract class CESDKPluginClass
     {
         public CESDK sdk;
@@ -107,17 +107,17 @@ namespace CESDK
             return delCheckSynchronize(timeout);
         }
 
-        
+
         private Boolean GetVersion([MarshalAs(UnmanagedType.Struct)] ref TPluginVersion PluginVersion, int TPluginVersionSize)
         {
             PluginVersion.name = PluginNamePtr;
             PluginVersion.version = PLUGINVERSION;
-            return true;            
+            return true;
         }
 
         private Boolean EnablePlugin([MarshalAs(UnmanagedType.Struct)] ref TExportedFunctions ExportedFunctions, UInt32 pluginid)
-        {            
-            this.pluginid = pluginid; 
+        {
+            this.pluginid = pluginid;
             pluginexports = ExportedFunctions;
 
             //setup the delegates
@@ -127,7 +127,7 @@ namespace CESDK
             if (delCheckSynchronize == null)
                 delCheckSynchronize = Marshal.GetDelegateForFunctionPointer<delegateCheckSynchronize>(pluginexports.CheckSynchronize);
 
-            if (lua==null)
+            if (lua == null)
                 lua = new CESDKLua(this);
 
             currentPlugin.sdk = this;
@@ -136,7 +136,7 @@ namespace CESDK
 
         private Boolean DisablePlugin()
         {
-            return currentPlugin.DisablePlugin();            
+            return currentPlugin.DisablePlugin();
         }
 
         CESDK()
@@ -149,14 +149,13 @@ namespace CESDK
 
         public static int CEPluginInitialize(string parameters)
         {
-            if (mainself == null)
-                mainself = new CESDK();
+            mainself ??= new CESDK();
 
             if ((Int64)PluginNamePtr == 0)
             {
-                Type[] x=typeof(CESDKPluginClass).Assembly.GetTypes();                
-           
-                for (int i=0; i<x.Count(); i++)
+                Type[] x = typeof(CESDKPluginClass).Assembly.GetTypes();
+
+                for (int i = 0; i < x.Count(); i++)
                 {
                     if (x[i].IsSubclassOf(typeof(CESDKPluginClass)))
                     {
@@ -187,5 +186,5 @@ namespace CESDK
             return 1;
         }
 
-    }   
+    }
 }

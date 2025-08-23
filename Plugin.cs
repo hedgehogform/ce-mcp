@@ -12,7 +12,7 @@ namespace CeMCP
         private MCPServerWrapper _mcpServer;
         private ConfigurationWindow _configWindow = null;
         private Thread _configThread = null;
-        
+
         public bool IsServerRunning => _isServerRunning;
 
         public override string GetPluginName()
@@ -81,7 +81,7 @@ namespace CeMCP
                 if (_configWindow != null && _configThread != null && _configThread.IsAlive)
                 {
                     // Try to bring existing window to front
-                    _configWindow?.Dispatcher?.BeginInvoke(new Action(() =>
+                    _configWindow.Dispatcher?.BeginInvoke(new Action(() =>
                     {
                         if (_configWindow.WindowState == System.Windows.WindowState.Minimized)
                             _configWindow.WindowState = System.Windows.WindowState.Normal;
@@ -103,7 +103,7 @@ namespace CeMCP
                             new Action(() =>
                             {
                                 _configWindow = new ConfigurationWindow(this);
-                                
+
                                 // Handle window closing to clean up references
                                 _configWindow.Closed += (sender, e) =>
                                 {
@@ -111,13 +111,13 @@ namespace CeMCP
                                     System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvokeShutdown(
                                         System.Windows.Threading.DispatcherPriority.Background);
                                 };
-                                
+
                                 _configWindow.Show();
                             }));
-                        
+
                         // Start the WPF dispatcher message loop
                         System.Windows.Threading.Dispatcher.Run();
-                        
+
                         _configThread = null;
                     }
                     catch (Exception ex)
@@ -127,7 +127,7 @@ namespace CeMCP
                         _configThread = null;
                     }
                 });
-                
+
                 _configThread.SetApartmentState(ApartmentState.STA);
                 _configThread.Start();
                 return 1;
