@@ -22,7 +22,7 @@ namespace CESDK
 
                 // Create a table with the bytes
                 lua.PushNil(); // Create new table
-                lua.NewTable();
+                lua.CreateTable(0, 0);
                 for (int i = 0; i < bytes.Length; i++)
                 {
                     lua.PushInteger(i + 1); // Lua arrays are 1-indexed

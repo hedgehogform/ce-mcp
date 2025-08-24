@@ -73,7 +73,7 @@ namespace CESDK
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_pushboolean(IntPtr state, [MarshalAs(UnmanagedType.Bool)] bool b);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int dlua_newtable(IntPtr state);
+        private delegate int dlua_createtable(IntPtr state, int narr, int nrec);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_next(IntPtr state, int idx);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -154,7 +154,7 @@ namespace CESDK
         private readonly dlua_pushlstring lua_pushlstring;
         private readonly dlua_pushstring lua_pushstring;
         private readonly dlua_pushboolean lua_pushboolean;
-        private readonly dlua_newtable lua_newtable;
+        private readonly dlua_createtable lua_createtable;
         private readonly dlua_next lua_next;
         private readonly dlua_type lua_type;
         private readonly dlua_isnumber lua_isnumber;
@@ -270,8 +270,8 @@ namespace CESDK
         public void PushNil() { lua_pushnil(State); }
         public void PushNil(IntPtr L) { lua_pushnil(L); }
 
-        public void NewTable() { lua_newtable(State); }
-        public void NewTable(IntPtr L) { lua_newtable(L); }
+        public void CreateTable(int narr, int nrec) { lua_createtable(State, narr, nrec); }
+        public void CreateTable(IntPtr L, int narr, int nrec) { lua_createtable(L, narr, nrec); }
 
         public int Next(int idx) { return lua_next(State, idx); }
         public int Next(IntPtr L, int idx) { return lua_next(L, idx); }
@@ -436,7 +436,7 @@ namespace CESDK
                 lua_pushlstring = Marshal.GetDelegateForFunctionPointer<dlua_pushlstring>(GetProcAddress(hLibLua, "lua_pushlstring"));
                 lua_pushstring = Marshal.GetDelegateForFunctionPointer<dlua_pushstring>(GetProcAddress(hLibLua, "lua_pushstring"));
                 lua_pushboolean = Marshal.GetDelegateForFunctionPointer<dlua_pushboolean>(GetProcAddress(hLibLua, "lua_pushboolean"));
-                lua_newtable = Marshal.GetDelegateForFunctionPointer<dlua_newtable>(GetProcAddress(hLibLua, "lua_newtable"));
+                lua_createtable = Marshal.GetDelegateForFunctionPointer<dlua_createtable>(GetProcAddress(hLibLua, "lua_createtable"));
                 lua_next = Marshal.GetDelegateForFunctionPointer<dlua_next>(GetProcAddress(hLibLua, "lua_next"));
 
 
