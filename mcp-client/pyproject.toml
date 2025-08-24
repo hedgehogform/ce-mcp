@@ -1,7 +1,0 @@
-[project]
-name = "mcp-client"
-version = "0.1.0"
-description = "MCP Client for Cheat Engine API"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = ["httpx>=0.28.1", "mcp[cli]>=1.13.1"]
