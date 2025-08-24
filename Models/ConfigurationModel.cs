@@ -83,17 +83,18 @@ namespace CeMCP.Models
                 {
                     _serverStatus = value;
                     OnPropertyChanged();
-                    
+
                     // Update color based on status
-                    ServerStatusColor = value.ToLower() switch
-                    {
-                        "running" => Brushes.Green,
-                        "stopped" => Brushes.Red,
-                        "starting" => Brushes.Orange,
-                        "stopping" => Brushes.Orange,
-                        _ => Brushes.Gray
-                    };
-                    
+                    string lowerStatus = value.ToLower();
+                    if (lowerStatus == "running")
+                        ServerStatusColor = Brushes.Green;
+                    else if (lowerStatus == "stopped")
+                        ServerStatusColor = Brushes.Red;
+                    else if (lowerStatus == "starting" || lowerStatus == "stopping")
+                        ServerStatusColor = Brushes.Orange;
+                    else
+                        ServerStatusColor = Brushes.Gray;
+
                     IsServerRunning = value.ToLower() == "running";
                     OnPropertyChanged(nameof(StartStopButtonText));
                 }
@@ -128,16 +129,16 @@ namespace CeMCP.Models
 
         public void LoadFromServerConfig()
         {
-            Host = ServerConfig.Host;
-            Port = ServerConfig.Port;
-            ServerName = ServerConfig.ServerName;
+            Host = ServerConfig.ConfigHost;
+            Port = ServerConfig.ConfigPort;
+            ServerName = ServerConfig.ConfigServerName;
         }
 
         public void SaveToServerConfig()
         {
-            ServerConfig.Host = Host;
-            ServerConfig.Port = Port;
-            ServerConfig.ServerName = ServerName;
+            ServerConfig.ConfigHost = Host;
+            ServerConfig.ConfigPort = Port;
+            ServerConfig.ConfigServerName = ServerName;
             ServerConfig.SaveToFile();
         }
 

@@ -9,7 +9,7 @@ namespace CESDK
     //Not much of an SDK but more an example of how to wrap the exposed classes by CE into C# classes. Learn from this and implement the other features you like
 
 
-    class FoundList :CEObjectWrapper
+    class FoundList : CEObjectWrapper
     {
         public int Count { get { return GetCount(); } }
 
@@ -26,12 +26,12 @@ namespace CESDK
             finally
             {
                 lua.SetTop(0);
-            }                
+            }
         }
 
         public string GetAddress(int i)
         {
-            
+
             try
             {
                 lua.PushCEObject(CEObject);
@@ -43,7 +43,7 @@ namespace CESDK
                     lua.PushInteger(i);
                     lua.GetTable(-2); //gets index i from the Address table  (pushInteger increased the stack by 1 so the -1 turned to -2, just in case you wanted to know...)
                     return lua.ToString(-1);
-                }                
+                }
             }
             finally
             {
@@ -109,7 +109,7 @@ namespace CESDK
                 int pcr = lua.PCall(1, 1);
 
                 if (lua.IsCEObject(-1))
-                    CEObject = lua.ToCEObject(-1);                        
+                    CEObject = lua.ToCEObject(-1);
                 else
                     throw new System.ApplicationException("No idea what it returned");
             }

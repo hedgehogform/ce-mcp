@@ -33,9 +33,9 @@ async def make_request(endpoint: str, method: str = "GET", data: Dict[str, Any] 
     async with httpx.AsyncClient() as client:
         try:
             if method.upper() == "POST":
-                response = await client.post(url, json=data, timeout=30.0)
+                response = await client.post(url, json=data, timeout=600.0)
             else:
-                response = await client.get(url, timeout=30.0)
+                response = await client.get(url, timeout=600.0)
             
             response.raise_for_status()
             return response.json()
@@ -738,6 +738,145 @@ async def get_instruction_size(address: str) -> Dict[str, Any]:
     return await make_request("get-instruction-size", "POST", {
         "address": address
     })
+
+@mcp.tool()
+async def memscan_first(scan_option: str, var_type: str, input1: str = None, input2: str = None, 
+                       rounding_type: str = "rtRounded", start_address: str = "0", 
+                       stop_address: str = "0xffffffffffffffff", protection_flags: str = None,
+                       alignment_type: str = None, alignment_param: str = None,
+                       is_hexadecimal: bool = False, is_not_binary_string: bool = False,
+                       is_unicode: bool = False, is_case_sensitive: bool = False) -> Dict[str, Any]:
+    """
+    Perform a first memory scan to search for values in the target process
+    This function blocks and waits until the scan is complete before returning.
+    
+    Args:
+        scan_option: Type of scan (soUnknownValue, soExactValue, soValueBetween, soBiggerThan, soSmallerThan)
+        var_type: Variable type (vtByte, vtWord, vtDword, vtQword, vtSingle, vtDouble, vtString, vtByteArray, vtGrouped, vtBinary, vtAll)
+        input1: Primary search value (required for most scan types except soUnknownValue)
+        input2: Secondary search value (required for soValueBetween)
+        rounding_type: Rounding type for floating point values (rtRounded, rtTruncated, rtExtremerounded)
+        start_address: Start address for scan (default: "0")
+        stop_address: Stop address for scan (default: "0xffffffffffffffff")
+        protection_flags: Memory protection flags (e.g., "+W+X")
+        alignment_type: Alignment type (fsmNotAligned, fsmAligned, fsmLastDigits)
+        alignment_param: Alignment parameter
+        is_hexadecimal: Whether input values are hexadecimal
+        is_not_binary_string: Whether to handle binary as decimal instead of binary string
+        is_unicode: Whether to use Unicode (UTF-16) for string scans
+        is_case_sensitive: Whether string comparison is case sensitive
+        
+    Returns:
+        Dictionary with scan ID and result count after completion
+    """
+    data = {
+        "scanOption": scan_option,
+        "varType": var_type,
+        "roundingType": rounding_type,
+        "startAddress": start_address,
+        "stopAddress": stop_address,
+        "isHexadecimalInput": is_hexadecimal,
+        "isNotABinaryString": is_not_binary_string,
+        "isUnicodeScan": is_unicode,
+        "isCaseSensitive": is_case_sensitive
+    }
+    
+    if input1 is not None:
+        data["input1"] = input1
+    if input2 is not None:
+        data["input2"] = input2
+    if protection_flags is not None:
+        data["protectionFlags"] = protection_flags
+    if alignment_type is not None:
+        data["alignmentType"] = alignment_type
+    if alignment_param is not None:
+        data["alignmentParam"] = alignment_param
+    
+    return await make_request("memscan-first", "POST", data)
+
+@mcp.tool()
+async def memscan_next(scan_id: str, scan_option: str, input1: str = None, input2: str = None,
+                      rounding_type: str = "rtRounded", is_hexadecimal: bool = False,
+                      is_not_binary_string: bool = False, is_unicode: bool = False,
+                      is_case_sensitive: bool = False, is_percentage: bool = False,
+                      saved_result_name: str = None) -> Dict[str, Any]:
+    """
+    Perform a next memory scan based on previous scan results
+    This function blocks and waits until the scan is complete before returning.
+    
+    Args:
+        scan_id: ID of the previous scan to build upon
+        scan_option: Type of next scan (soExactValue, soValueBetween, soBiggerThan, soSmallerThan, 
+                    soIncreasedValue, soIncreasedValueBy, soDecreasedValue, soDecreasedValueBy, 
+                    soChanged, soUnchanged)
+        input1: Primary search value
+        input2: Secondary search value (for between scans)
+        rounding_type: Rounding type for floating point values (rtRounded, rtTruncated, rtExtremerounded)
+        is_hexadecimal: Whether input values are hexadecimal
+        is_not_binary_string: Whether to handle binary as decimal instead of binary string
+        is_unicode: Whether to use Unicode (UTF-16) for string scans
+        is_case_sensitive: Whether string comparison is case sensitive
+        is_percentage: Whether to use percentage-based comparison
+        saved_result_name: Name of saved result to compare against (optional)
+        
+    Returns:
+        Dictionary with scan ID and result count after completion
+    """
+    data = {
+        "scanId": scan_id,
+        "scanOption": scan_option,
+        "roundingType": rounding_type,
+        "isHexadecimalInput": is_hexadecimal,
+        "isNotABinaryString": is_not_binary_string,
+        "isUnicodeScan": is_unicode,
+        "isCaseSensitive": is_case_sensitive,
+        "isPercentageScan": is_percentage
+    }
+    
+    if input1 is not None:
+        data["input1"] = input1
+    if input2 is not None:
+        data["input2"] = input2
+    if saved_result_name is not None:
+        data["savedResultName"] = saved_result_name
+    
+    return await make_request("memscan-next", "POST", data)
+
+
+@mcp.tool()
+async def memscan_results(scan_id: str, start_index: int = 0, count: int = 100) -> Dict[str, Any]:
+    """
+    Get results from a completed memory scan
+    
+    Args:
+        scan_id: ID of the scan to get results from
+        start_index: Starting index for results (for pagination)
+        count: Maximum number of results to return
+        
+    Returns:
+        Dictionary with scan results including:
+        - results: Array of {address, value} objects
+        - totalCount: Total number of results available
+        - hasMore: Whether there are more results beyond this batch
+    """
+    return await make_request("memscan-results", "POST", {
+        "scanId": scan_id,
+        "startIndex": start_index,
+        "count": count
+    })
+
+@mcp.tool()
+async def memscan_new_scan(scan_id: str) -> Dict[str, Any]:
+    """
+    Clear the results of an existing memory scan to prepare for a new first scan
+    
+    Args:
+        scan_id: ID of the scan to clear
+        
+    Returns:
+        Dictionary with success status
+    """
+    return await make_request("memscan-new", "POST", {"scanId": scan_id})
 
 @mcp.tool() 
 async def get_api_info() -> Dict[str, Any]:

@@ -379,3 +379,5 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+cheat-engine/

@@ -115,6 +115,11 @@ namespace CESDK
             lua.SetTop(0);
         }
 
+        public FoundList GetFoundList()
+        {
+            return new FoundList(this);
+        }
+
         public void Scan(ScanParameters p)
         {
             try
@@ -127,8 +132,8 @@ namespace CESDK
                     //first scan
                     lua.PushString("firstScan");
                     lua.GetTable(-2);
-                    
-                    if (lua.IsFunction(-1)==false) throw new System.ApplicationException("memscan object without a firstScan method");
+
+                    if (lua.IsFunction(-1) == false) throw new System.ApplicationException("memscan object without a firstScan method");
 
                     lua.PushInteger((long)p.ScanOption);
                     lua.PushInteger((long)p.VarType);
@@ -206,7 +211,7 @@ namespace CESDK
             //function(memscan, TotalAddressesToScan, CurrentlyScanned, ResultsFound) - Called during the scan so you can update the interface if needed
             if (OnGuiUpdate != null)
             {
-                if (lua.GetTop()>=4)
+                if (lua.GetTop() >= 4)
                     OnGuiUpdate(this, (UInt64)lua.ToInteger(2), (UInt64)lua.ToInteger(3), (UInt64)lua.ToInteger(4));
             }
 
@@ -227,7 +232,7 @@ namespace CESDK
                 lua.GetGlobal("createMemScan");
                 if (lua.IsNil(-1))
                     throw new System.ApplicationException("You have no createFoundList (WTF)");
-                               
+
                 lua.PCall(0, 1);
 
                 if (lua.IsCEObject(-1))
@@ -244,12 +249,12 @@ namespace CESDK
 
                     lua.PushString("OnGuiUpdate");
                     lua.PushFunction(dLGuiUpdate);
-                    lua.SetTable(-3);                       
-                        
+                    lua.SetTable(-3);
+
                 }
                 else
-                    throw new System.ApplicationException("No idea what it returned");                
-                
+                    throw new System.ApplicationException("No idea what it returned");
+
             }
             finally
             {

@@ -11,13 +11,13 @@ using System.Reflection;
 
 namespace CESDK
 {
- 
+
     public abstract class CESDKPluginClass
     {
         public CESDK sdk;
-        public abstract String GetPluginName();
-        public abstract Boolean EnablePlugin();
-        public abstract Boolean DisablePlugin();
+        public abstract string GetPluginName();
+        public abstract bool EnablePlugin();
+        public abstract bool DisablePlugin();
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -47,7 +47,7 @@ namespace CESDK
         [StructLayout(LayoutKind.Sequential)]
         private struct TPluginVersion
         {
-            public UInt32 version;
+            public uint version;
             public IntPtr name;
         }
 
@@ -62,13 +62,13 @@ namespace CESDK
         }
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate Boolean delegateGetVersion([MarshalAs(UnmanagedType.Struct)] ref TPluginVersion PluginVersion, int TPluginVersionSize);
+        private delegate bool delegateGetVersion([MarshalAs(UnmanagedType.Struct)] ref TPluginVersion PluginVersion, int TPluginVersionSize);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate Boolean delegateEnablePlugin([MarshalAs(UnmanagedType.Struct)] ref TExportedFunctions ExportedFunctions, UInt32 pluginid);
+        private delegate bool delegateEnablePlugin([MarshalAs(UnmanagedType.Struct)] ref TExportedFunctions ExportedFunctions, uint pluginid);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate Boolean delegateDisablePlugin();
+        private delegate bool delegateDisablePlugin();
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate void delegateProcessMessages();
@@ -79,13 +79,13 @@ namespace CESDK
 
         private static CESDK mainself; //prevents garbage collection
 
-        private delegateGetVersion delGetVersion;
-        private delegateEnablePlugin delEnablePlugin;
-        private delegateDisablePlugin delDisablePlugin;
+        private readonly delegateGetVersion delGetVersion;
+        private readonly delegateEnablePlugin delEnablePlugin;
+        private readonly delegateDisablePlugin delDisablePlugin;
         private delegateProcessMessages delProcessMessages;
         private delegateCheckSynchronize delCheckSynchronize;
 
-        public UInt32 pluginid;
+        public uint pluginid;
         public TExportedFunctions pluginexports;
 
         /// <summary>
@@ -107,17 +107,17 @@ namespace CESDK
             return delCheckSynchronize(timeout);
         }
 
-        
-        private Boolean GetVersion([MarshalAs(UnmanagedType.Struct)] ref TPluginVersion PluginVersion, int TPluginVersionSize)
+
+        private bool GetVersion([MarshalAs(UnmanagedType.Struct)] ref TPluginVersion PluginVersion, int TPluginVersionSize)
         {
             PluginVersion.name = PluginNamePtr;
             PluginVersion.version = PLUGINVERSION;
-            return true;            
+            return true;
         }
 
-        private Boolean EnablePlugin([MarshalAs(UnmanagedType.Struct)] ref TExportedFunctions ExportedFunctions, UInt32 pluginid)
-        {            
-            this.pluginid = pluginid; 
+        private bool EnablePlugin([MarshalAs(UnmanagedType.Struct)] ref TExportedFunctions ExportedFunctions, uint pluginid)
+        {
+            this.pluginid = pluginid;
             pluginexports = ExportedFunctions;
 
             //setup the delegates
@@ -127,16 +127,16 @@ namespace CESDK
             if (delCheckSynchronize == null)
                 delCheckSynchronize = Marshal.GetDelegateForFunctionPointer<delegateCheckSynchronize>(pluginexports.CheckSynchronize);
 
-            if (lua==null)
+            if (lua == null)
                 lua = new CESDKLua(this);
 
             currentPlugin.sdk = this;
             return currentPlugin.EnablePlugin();
         }
 
-        private Boolean DisablePlugin()
+        private bool DisablePlugin()
         {
-            return currentPlugin.DisablePlugin();            
+            return currentPlugin.DisablePlugin();
         }
 
         CESDK()
@@ -152,11 +152,11 @@ namespace CESDK
             if (mainself == null)
                 mainself = new CESDK();
 
-            if ((Int64)PluginNamePtr == 0)
+            if ((long)PluginNamePtr == 0)
             {
-                Type[] x=typeof(CESDKPluginClass).Assembly.GetTypes();                
-           
-                for (int i=0; i<x.Count(); i++)
+                Type[] x = typeof(CESDKPluginClass).Assembly.GetTypes();
+
+                for (int i = 0; i < x.Count(); i++)
                 {
                     if (x[i].IsSubclassOf(typeof(CESDKPluginClass)))
                     {
@@ -173,7 +173,7 @@ namespace CESDK
 
 
 
-            UInt64 a = UInt64.Parse(parameters);
+            ulong a = ulong.Parse(parameters);
 
 
             TPluginInit bla;
@@ -187,5 +187,5 @@ namespace CESDK
             return 1;
         }
 
-    }   
+    }
 }

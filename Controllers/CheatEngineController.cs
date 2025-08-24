@@ -6,97 +6,94 @@ namespace CeMCP.Controllers
     [RoutePrefix("api/cheatengine")]
     public class CheatEngineController : ApiController
     {
-        private readonly CheatEngineTools _tools;
+        private readonly CheatEngineTools tools = new CheatEngineTools();
 
-        public CheatEngineController(CheatEngineTools tools)
-        {
-            _tools = tools;
-        }
 
         [HttpPost]
         [Route("execute-lua")]
         public LuaResponse ExecuteLua([FromBody] LuaRequest request)
         {
-            return _tools.ExecuteLua(request);
+            return tools.ExecuteLua(request);
         }
 
         [HttpGet]
         [Route("process-list")]
         public ProcessListResponse GetProcessList()
         {
-            return _tools.GetProcessList();
+            return tools.GetProcessList();
         }
 
         [HttpPost]
         [Route("open-process")]
         public BaseResponse OpenProcess([FromBody] OpenProcessRequest request)
         {
-            return _tools.OpenProcess(request);
+            return tools.OpenProcess(request);
         }
 
         [HttpGet]
         [Route("thread-list")]
         public ThreadListResponse GetThreadList()
         {
-            return _tools.GetThreadList();
+            return tools.GetThreadList();
         }
 
         [HttpGet]
         [Route("process-status")]
         public ProcessStatusResponse GetProcessStatus()
         {
-            return _tools.GetProcessStatus();
+            return tools.GetProcessStatus();
         }
 
         [HttpPost]
         [Route("read-memory")]
         public MemoryReadResponse ReadMemory([FromBody] MemoryReadRequest request)
         {
-            return _tools.ReadMemory(request);
+            return tools.ReadMemory(request);
         }
 
         [HttpPost]
         [Route("write-memory")]
         public BaseResponse WriteMemory([FromBody] MemoryWriteRequest request)
         {
-            return _tools.WriteMemory(request);
+            return tools.WriteMemory(request);
         }
 
         [HttpPost]
         [Route("convert")]
         public ConversionResponse Convert([FromBody] ConversionRequest request)
         {
-            return _tools.Convert(request);
+            return tools.Convert(request);
         }
 
         [HttpPost]
         [Route("aob-scan")]
-        public AOBScanResponse AOBScan([FromBody] AOBScanRequest request)
+        public AobScanResponse AOBScan([FromBody] AobScanRequest request)
         {
-            return _tools.AOBScan(request);
+            return tools.AOBScan(request);
         }
 
         [HttpPost]
         [Route("disassemble")]
-        public DisassembleResponse Disassemble([FromBody] DisassembleRequest request)
+        public DisassemblerResponse Disassemble([FromBody] DisassemblerRequest request)
         {
-            return _tools.Disassemble(request);
+            return tools.Disassemble(request);
         }
 
         [HttpPost]
-        [Route("get-instruction-size")]
-        public GetInstructionSizeResponse GetInstruction([FromBody] GetInstructionSizeRequest request)
+        [Route("memscan")]
+        public MemScanResponse MemScan([FromBody] MemScanScanRequest request)
         {
-            return _tools.GetInstructionSize(request);
+            return tools.Scan(request);
         }
 
         [HttpGet]
         [Route("health")]
         public IHttpActionResult GetHealth()
         {
-            return Ok(new { 
-                status = "healthy", 
-                server = ServerConfig.ServerName,
+            return Ok(new
+            {
+                status = "healthy",
+                server = ServerConfig.ConfigServerName,
                 version = typeof(CheatEngineController).Assembly.GetName().Version?.ToString(),
                 timestamp = System.DateTime.UtcNow
             });

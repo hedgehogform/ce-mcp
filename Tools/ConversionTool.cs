@@ -6,13 +6,6 @@ namespace CeMCP.Tools
 {
     public class ConversionTool
     {
-        private readonly McpPlugin _plugin;
-
-        public ConversionTool(McpPlugin plugin)
-        {
-            _plugin = plugin ?? throw new ArgumentNullException(nameof(plugin));
-        }
-
         public ConversionResponse Convert(ConversionRequest request)
         {
             try
@@ -35,7 +28,6 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var lua = _plugin.sdk.lua;
                 string luaFunction = GetLuaFunction(request.ConversionType);
 
                 if (string.IsNullOrEmpty(luaFunction))
@@ -47,50 +39,8 @@ namespace CeMCP.Tools
                     };
                 }
 
-                // Build Lua code to perform the conversion
-                string inputValue = request.Input.Replace("\"", "\\\"");
-                string luaCode = $@"
-                    local input = ""{inputValue}""
-                    local success, result = pcall(function()
-                        return {luaFunction}(input)
-                    end)
-                    
-                    if success then
-                        return result
-                    else
-                        return nil
-                    end
-                ";
-
-                int luaResult = lua.DoString(luaCode);
-                if (luaResult != 0)
-                {
-                    string error = lua.ToString(-1);
-                    lua.Pop(1);
-                    return new ConversionResponse
-                    {
-                        Success = false,
-                        Error = $"Lua execution failed: {error}"
-                    };
-                }
-
-                // Get the result
-                string output = null;
-                if (lua.IsString(-1))
-                {
-                    output = lua.ToString(-1);
-                }
-                else if (lua.IsNil(-1))
-                {
-                    lua.Pop(1);
-                    return new ConversionResponse
-                    {
-                        Success = false,
-                        Error = "Conversion failed"
-                    };
-                }
-
-                lua.Pop(1);
+                var converter = new StringConverter();
+                string output = converter.ConvertString(request.Input, request.ConversionType);
 
                 return new ConversionResponse
                 {
@@ -110,13 +60,15 @@ namespace CeMCP.Tools
 
         private static string GetLuaFunction(string conversionType)
         {
-            return conversionType.ToLower() switch
-            {
-                "ansitoutf8" => "ansiToUtf8",
-                "utf8toansi" => "utf8ToAnsi",
-                "stringtomd5string" or "stringtomd5" or "md5" => "stringToMD5String",
-                _ => null
-            };
+            string lowerType = conversionType.ToLower();
+            if (lowerType == "ansitoutf8")
+                return "ansiToUtf8";
+            else if (lowerType == "utf8toansi")
+                return "utf8ToAnsi";
+            else if (lowerType == "md5")
+                return "stringToMD5String";
+            else
+                return null;
         }
     }
 }

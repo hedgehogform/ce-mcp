@@ -3,43 +3,36 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using CeMCP.Models;
 
 namespace CeMCP
 {
-    public partial class ConfigPage : Page
+    public partial class ConfigWindow : Window
     {
-        private ConfigurationModel _viewModel;
-        private McpPlugin _plugin;
+        private readonly ConfigurationModel _viewModel;
+        private readonly McpPlugin _plugin;
 
-        public ConfigPage()
+        public ConfigWindow(McpPlugin plugin)
         {
             InitializeComponent();
+            _plugin = plugin;
+
             _viewModel = new ConfigurationModel();
             DataContext = _viewModel;
-            
+
             _viewModel.LoadFromServerConfig();
             UpdateServerStatus();
-        }
 
-        public ConfigPage(McpPlugin plugin) : this()
-        {
-            _plugin = plugin;
-            UpdateServerStatus();
+            ApplyTheme(IsWindowsInDarkMode());
         }
 
         private void UpdateServerStatus()
         {
             if (_plugin?.GetServerWrapper()?.IsRunning == true)
-            {
                 _viewModel.ServerStatus = "Running";
-            }
             else
-            {
                 _viewModel.ServerStatus = "Stopped";
-            }
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -58,22 +51,14 @@ namespace CeMCP
         private async void TestButton_Click(object sender, RoutedEventArgs e)
         {
             _viewModel.TestResult = "Testing connection...";
-            
             try
             {
-                using (var client = new HttpClient())
+                using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) })
                 {
-                    client.Timeout = TimeSpan.FromSeconds(5);
                     var response = await client.GetAsync($"{_viewModel.BaseUrl}/api/cheatengine/health");
-                    
-                    if (response.IsSuccessStatusCode)
-                    {
-                        _viewModel.TestResult = "✓ Connection successful! Server is responding.";
-                    }
-                    else
-                    {
-                        _viewModel.TestResult = $"✗ Server responded with status: {response.StatusCode}";
-                    }
+                    _viewModel.TestResult = response.IsSuccessStatusCode
+                        ? "✓ Connection successful! Server is responding."
+                        : $"✗ Server responded with status: {response.StatusCode}";
                 }
             }
             catch (HttpRequestException ex)
@@ -105,7 +90,6 @@ namespace CeMCP
                     _plugin?.StartServer();
                     _viewModel.TestResult = "Server started.";
                 }
-                
                 UpdateServerStatus();
             }
             catch (Exception ex)
@@ -119,11 +103,7 @@ namespace CeMCP
             try
             {
                 var url = _viewModel.SwaggerUrl;
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = url,
-                    UseShellExecute = true
-                });
+                Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
                 _viewModel.TestResult = $"Opening Swagger UI in browser: {url}";
             }
             catch (Exception ex)
@@ -137,41 +117,19 @@ namespace CeMCP
             var textBoxStyle = isDarkMode ? "DarkTextBoxStyle" : "LightTextBoxStyle";
             var buttonStyle = isDarkMode ? "DarkButtonStyle" : "LightButtonStyle";
 
-            // Apply background colors
-            if (isDarkMode)
-            {
-                Background = new SolidColorBrush(Color.FromRgb(32, 32, 32));
-                MainGrid.Background = new SolidColorBrush(Color.FromRgb(32, 32, 32));
-                
-                // Set text colors for labels and textblocks
-                var lightBrush = new SolidColorBrush(Colors.White);
-                TitleTextBlock.Foreground = lightBrush;
-                HostLabel.Foreground = lightBrush;
-                PortLabel.Foreground = lightBrush;
-                ServerNameLabel.Foreground = lightBrush;
-                BaseUrlLabel.Foreground = lightBrush;
-                StatusLabel.Foreground = lightBrush;
-                BaseUrlTextBlock.Foreground = lightBrush;
-                TestResultTextBlock.Foreground = lightBrush;
-            }
-            else
-            {
-                Background = new SolidColorBrush(Colors.White);
-                MainGrid.Background = new SolidColorBrush(Colors.White);
-                
-                // Set text colors for labels and textblocks
-                var darkBrush = new SolidColorBrush(Colors.Black);
-                TitleTextBlock.Foreground = darkBrush;
-                HostLabel.Foreground = darkBrush;
-                PortLabel.Foreground = darkBrush;
-                ServerNameLabel.Foreground = darkBrush;
-                BaseUrlLabel.Foreground = darkBrush;
-                StatusLabel.Foreground = darkBrush;
-                BaseUrlTextBlock.Foreground = darkBrush;
-                TestResultTextBlock.Foreground = darkBrush;
-            }
+            Background = isDarkMode ? new SolidColorBrush(Color.FromRgb(32, 32, 32)) : Brushes.White;
+            MainGrid.Background = Background;
 
-            // Apply styles to controls
+            var textBrush = new SolidColorBrush(isDarkMode ? Colors.White : Colors.Black);
+            TitleTextBlock.Foreground = textBrush;
+            HostLabel.Foreground = textBrush;
+            PortLabel.Foreground = textBrush;
+            ServerNameLabel.Foreground = textBrush;
+            BaseUrlLabel.Foreground = textBrush;
+            StatusLabel.Foreground = textBrush;
+            BaseUrlTextBlock.Foreground = textBrush;
+            TestResultTextBlock.Foreground = textBrush;
+
             if (FindResource(textBoxStyle) is Style tbStyle)
             {
                 HostTextBox.Style = tbStyle;
@@ -185,6 +143,21 @@ namespace CeMCP
                 TestButton.Style = btnStyle;
                 StartStopButton.Style = btnStyle;
                 OpenSwaggerButton.Style = btnStyle;
+            }
+        }
+
+        private static bool IsWindowsInDarkMode()
+        {
+            try
+            {
+                var value = Microsoft.Win32.Registry.GetValue(
+                    @"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                    "AppsUseLightTheme", 1);
+                return (int)value == 0;
+            }
+            catch
+            {
+                return false;
             }
         }
     }
