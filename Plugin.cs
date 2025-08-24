@@ -8,12 +8,12 @@ namespace CeMCP
 {
     public class McpPlugin : CESDKPluginClass
     {
-        private bool _isServerRunning = false;
-        private MCPServerWrapper _mcpServer;
-        private ConfigurationWindow _configWindow = null;
-        private Thread _configThread = null;
+        private bool isServerRunning = false;
+        private McpServer mcpServer;
+        private ConfigWindow configWindow = null;
+        private Thread configThread = null;
 
-        public bool IsServerRunning => _isServerRunning;
+        public bool IsServerRunning => isServerRunning;
 
         public override string GetPluginName()
         {
@@ -53,14 +53,14 @@ namespace CeMCP
 
         public override bool DisablePlugin()
         {
-            StopMCPServer().Wait();
+            StopMCPServer();
             return true;
         }
 
         int ToggleMCPServer()
         {
-            if (_isServerRunning)
-                StopMCPServer().Wait();
+            if (isServerRunning)
+                StopMCPServer();
             else
                 StartMCPServer();
             return 1;
@@ -68,7 +68,7 @@ namespace CeMCP
 
         int UpdateButtonText()
         {
-            string buttonText = _isServerRunning ? "Stop MCP Server" : "Start MCP Server";
+            string buttonText = isServerRunning ? "Stop MCP Server" : "Start MCP Server";
             sdk.lua.DoString($"mcpToggleMenuItem.Caption='{buttonText}'");
             return 1;
         }
@@ -77,59 +77,51 @@ namespace CeMCP
         {
             try
             {
-                // Check if window is already open
-                if (_configWindow != null && _configThread != null && _configThread.IsAlive)
+                if (configWindow != null && configThread != null && configThread.IsAlive)
                 {
-                    // Try to bring existing window to front
-                    _configWindow.Dispatcher?.BeginInvoke(new Action(() =>
+                    // Bring existing window to front
+                    configWindow.Dispatcher?.BeginInvoke(new Action(() =>
                     {
-                        if (_configWindow.WindowState == System.Windows.WindowState.Minimized)
-                            _configWindow.WindowState = System.Windows.WindowState.Normal;
-                        _configWindow.Activate();
-                        _configWindow.Topmost = true;
-                        _configWindow.Topmost = false;
-                        _configWindow.Focus();
+                        if (configWindow.WindowState == System.Windows.WindowState.Minimized)
+                            configWindow.WindowState = System.Windows.WindowState.Normal;
+                        configWindow.Activate();
+                        configWindow.Topmost = true;
+                        configWindow.Topmost = false;
+                        configWindow.Focus();
                     }));
                     return 1;
                 }
 
-                _configThread = new Thread(() =>
+                // Start window in a new STA thread
+                configThread = new Thread(() =>
                 {
                     try
                     {
-                        // Create and start WPF message pump properly
-                        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
-                            System.Windows.Threading.DispatcherPriority.Normal,
-                            new Action(() =>
-                            {
-                                _configWindow = new ConfigurationWindow(this);
+                        configWindow = new ConfigWindow(this);
+                        configWindow.Closed += (sender, e) =>
+                        {
+                            configWindow = null;
+                            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvokeShutdown(
+                                System.Windows.Threading.DispatcherPriority.Background);
+                        };
 
-                                // Handle window closing to clean up references
-                                _configWindow.Closed += (sender, e) =>
-                                {
-                                    _configWindow = null;
-                                    System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvokeShutdown(
-                                        System.Windows.Threading.DispatcherPriority.Background);
-                                };
-
-                                _configWindow.Show();
-                            }));
-
-                        // Start the WPF dispatcher message loop
+                        // Start WPF message loop safely
                         System.Windows.Threading.Dispatcher.Run();
-
-                        _configThread = null;
                     }
                     catch (Exception ex)
                     {
-                        sdk.lua.DoString($"print('Error in configuration window: {ex.Message}')");
-                        _configWindow = null;
-                        _configThread = null;
+                        sdk.lua.DoString($"print('Error in config window thread: {ex.Message}')");
+                        configWindow = null;
+                        configThread = null;
                     }
                 });
 
-                _configThread.SetApartmentState(ApartmentState.STA);
-                _configThread.Start();
+                configThread.SetApartmentState(ApartmentState.STA);
+                configThread.Start();
+
+                // Ensure window is shown on main thread safely
+                sdk.CheckSynchronize(50);
+
                 return 1;
             }
             catch (Exception ex)
@@ -141,16 +133,16 @@ namespace CeMCP
 
         public void RestartServer()
         {
-            if (_isServerRunning)
+            if (isServerRunning)
             {
-                StopMCPServer().Wait();
+                StopMCPServer();
                 StartMCPServer();
             }
         }
 
-        public MCPServerWrapper GetServerWrapper()
+        public McpServer GetServerWrapper()
         {
-            return _mcpServer;
+            return mcpServer;
         }
 
         public void StartServer()
@@ -160,31 +152,30 @@ namespace CeMCP
 
         public void StopServer()
         {
-            StopMCPServer().Wait();
+            StopMCPServer();
         }
 
         void StartMCPServer()
         {
-            if (_isServerRunning) return;
+            if (isServerRunning) return;
 
-            _mcpServer = new MCPServerWrapper(this);
+            mcpServer = new McpServer();
             ServerConfig.LoadFromFile();
             ServerConfig.LoadFromEnvironment(); // Environment variables override config file
-            _mcpServer.Start(ServerConfig.BaseUrl);
+            mcpServer.Start(ServerConfig.ConfigBaseUrl);
 
-            _isServerRunning = true;
-            sdk.lua.DoString($"print('MCP API Started on: {ServerConfig.BaseUrl}')");
+            isServerRunning = true;
+            sdk.lua.DoString($"print('MCP API Started on: {ServerConfig.ConfigBaseUrl}')");
             UpdateButtonText();
         }
 
-        async Task StopMCPServer()
+        void StopMCPServer()
         {
-            if (!_isServerRunning) return;
+            if (!isServerRunning) return;
 
-            if (_mcpServer != null)
-                await _mcpServer.StopAsync();
-            _mcpServer = null;
-            _isServerRunning = false;
+            mcpServer?.Stop();
+            mcpServer = null;
+            isServerRunning = false;
             sdk.lua.DoString("print('MCP API stopped')");
             UpdateButtonText();
         }

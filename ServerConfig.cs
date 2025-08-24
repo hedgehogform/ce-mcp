@@ -7,24 +7,24 @@ namespace CeMCP
 {
     public static class ServerConfig
     {
-        public static string Host { get; set; } = "127.0.0.1";
-        public static int Port { get; set; } = 6300;
-        public static string BaseUrl => $"http://{Host}:{Port}";
-        public static string ServerName { get; set; } = "Cheat Engine MCP Server";
+        public static string ConfigHost { get; set; } = "127.0.0.1";
+        public static int ConfigPort { get; set; } = 6300;
+        public static string ConfigBaseUrl => $"http://{ConfigHost}:{ConfigPort}";
+        public static string ConfigServerName { get; set; } = "Cheat Engine MCP Server";
 
         private static string ConfigFilePath => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "CeMCP", "config.json");
 
         public static void LoadFromEnvironment()
         {
             var hostEnv = Environment.GetEnvironmentVariable("MCP_HOST");
             if (!string.IsNullOrEmpty(hostEnv))
-                Host = hostEnv;
+                ConfigHost = hostEnv;
 
             var portEnv = Environment.GetEnvironmentVariable("MCP_PORT");
             if (!string.IsNullOrEmpty(portEnv) && int.TryParse(portEnv, out int port))
-                Port = port;
+                ConfigPort = port;
         }
 
         public static void LoadFromFile()
@@ -37,9 +37,9 @@ namespace CeMCP
                     var config = JsonSerializer.Deserialize<ConfigData>(json);
                     if (config != null)
                     {
-                        Host = config.Host ?? Host;
-                        Port = config.Port > 0 ? config.Port : Port;
-                        ServerName = config.ServerName ?? ServerName;
+                        ConfigHost = config.Host ?? ConfigHost;
+                        ConfigPort = config.Port > 0 ? config.Port : ConfigPort;
+                        ConfigServerName = config.ServerName ?? ConfigServerName;
                     }
                 }
             }
@@ -59,9 +59,9 @@ namespace CeMCP
 
                 var config = new ConfigData
                 {
-                    Host = Host,
-                    Port = Port,
-                    ServerName = ServerName
+                    Host = ConfigHost,
+                    Port = ConfigPort,
+                    ServerName = ConfigServerName
                 };
 
                 var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
@@ -73,7 +73,7 @@ namespace CeMCP
             }
         }
 
-        private class ConfigData
+        private sealed class ConfigData
         {
             public string? Host { get; set; }
             public int Port { get; set; }

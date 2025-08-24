@@ -4,8 +4,10 @@ using CeMCP.Models;
 namespace CeMCP.Controllers
 {
     [RoutePrefix("api/cheatengine")]
-    public class CheatEngineController(CheatEngineTools tools) : ApiController
+    public class CheatEngineController() : ApiController
     {
+        private readonly CheatEngineTools tools = new();
+
 
         [HttpPost]
         [Route("execute-lua")]
@@ -91,7 +93,7 @@ namespace CeMCP.Controllers
             return Ok(new
             {
                 status = "healthy",
-                server = ServerConfig.ServerName,
+                server = ServerConfig.ConfigServerName,
                 version = typeof(CheatEngineController).Assembly.GetName().Version?.ToString(),
                 timestamp = System.DateTime.UtcNow
             });

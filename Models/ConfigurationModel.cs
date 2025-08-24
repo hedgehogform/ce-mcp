@@ -83,7 +83,7 @@ namespace CeMCP.Models
                 {
                     _serverStatus = value;
                     OnPropertyChanged();
-                    
+
                     // Update color based on status
                     ServerStatusColor = value.ToLower() switch
                     {
@@ -93,7 +93,7 @@ namespace CeMCP.Models
                         "stopping" => Brushes.Orange,
                         _ => Brushes.Gray
                     };
-                    
+
                     IsServerRunning = value.ToLower() == "running";
                     OnPropertyChanged(nameof(StartStopButtonText));
                 }
@@ -128,16 +128,16 @@ namespace CeMCP.Models
 
         public void LoadFromServerConfig()
         {
-            Host = ServerConfig.Host;
-            Port = ServerConfig.Port;
-            ServerName = ServerConfig.ServerName;
+            Host = ServerConfig.ConfigHost;
+            Port = ServerConfig.ConfigPort;
+            ServerName = ServerConfig.ConfigServerName;
         }
 
         public void SaveToServerConfig()
         {
-            ServerConfig.Host = Host;
-            ServerConfig.Port = Port;
-            ServerConfig.ServerName = ServerName;
+            ServerConfig.ConfigHost = Host;
+            ServerConfig.ConfigPort = Port;
+            ServerConfig.ConfigServerName = ServerName;
             ServerConfig.SaveToFile();
         }
 

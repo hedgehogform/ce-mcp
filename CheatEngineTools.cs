@@ -4,7 +4,7 @@ using CESDK;
 
 namespace CeMCP
 {
-    public class CheatEngineTools()
+    public class CheatEngineTools
     {
         private readonly LuaExecutionTool _luaExecutionTool = new();
         private readonly ProcessTool _processTool = new();
