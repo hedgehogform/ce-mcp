@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Web.Http;
-using System.Web.Http.Dependencies;
-using CeMCP.Controllers;
 using Microsoft.Owin.Hosting;
 using Owin;
 using Swashbuckle.Application;

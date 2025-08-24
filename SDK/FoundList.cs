@@ -9,12 +9,8 @@ namespace CESDK
     //Not much of an SDK but more an example of how to wrap the exposed classes by CE into C# classes. Learn from this and implement the other features you like
 
 
-    public class FoundList : CEObjectWrapper
+    class FoundList : CEObjectWrapper
     {
-        public FoundList(IntPtr ceObject)
-        {
-            CEObject = ceObject;
-        }
         public int Count { get { return GetCount(); } }
 
         int GetCount()

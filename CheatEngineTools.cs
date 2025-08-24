@@ -68,14 +68,7 @@ namespace CeMCP
 
         public MemScanResponse Scan(MemScanScanRequest request)
         {
-            _memScanTool.StartScan(request);
-            _memScanTool.WaitForScan();
-
-
-            return new MemScanResponse
-            {
-                FoundList = _memScanTool.GetFoundList()
-            };
+            return _memScanTool.Scan(request);
         }
     }
 }

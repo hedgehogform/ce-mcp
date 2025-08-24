@@ -7,11 +7,13 @@ using CeMCP.Models;
 
 namespace CESDK
 {
-    class MemScanTool
+    public class MemScanTool
     {
         private readonly MemScan memScan = new();
 
-        public void StartScan(MemScanScanRequest request)
+
+
+        public MemScanResponse Scan(MemScanScanRequest request)
         {
             // Convert MemScanScanRequest to ScanParameters
             ScanParameters parameters = new()
@@ -33,16 +35,26 @@ namespace CESDK
             };
 
             memScan.Scan(parameters);
-        }
 
-        public void WaitForScan()
-        {
-            memScan.WaitTillDone();
-        }
+            var foundList = memScan.GetFoundList();
+            foundList.Initialize();
+            var countResults = foundList.Count;
+            var results = new ResultList
+            {
+                TotalCount = countResults
+            };
 
-        public FoundList GetFoundList()
-        {
-            return new FoundList(memScan);
+            // Only return max 1000 results by for loop.
+            for (int i = 0; i < Math.Min(countResults, 1000); i++)
+            {
+                results.Add(foundList.GetAddress(i), foundList.GetValue(i));
+            }
+
+            return new MemScanResponse
+            {
+                Success = true,
+                Results = results
+            };
         }
     }
 }

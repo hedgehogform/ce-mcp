@@ -45,7 +45,9 @@ namespace CeMCP
             }
             catch
             {
+                // Hi error
                 // If loading fails, use defaults
+                // Goodbye error
             }
         }
 

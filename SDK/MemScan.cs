@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace CESDK
 {
+    //Not much of an SDK but more an example of how to wrap the exposed classes by CE into C# classes.  Learn from this and implement the other features you like
+
     public enum ScanOptions
     {
         soUnknownValue = 0,
@@ -30,13 +32,13 @@ namespace CESDK
         vtSingle = 4,
         vtDouble = 5,
         vtString = 6,
-        vtUnicodeString = 7,
+        vtUnicodeString = 7, //--Only used by autoguess
         vtWideString = 7,
         vtByteArray = 8,
         vtBinary = 9,
         vtAll = 10,
         vtAutoAssembler = 11,
-        vtPointer = 12,
+        vtPointer = 12, //--Only used by autoguess and structures
         vtCustom = 13,
         vtGrouped = 14
     }
@@ -58,7 +60,7 @@ namespace CESDK
     public class ScanParameters
     {
         public string Value;
-        public string Value2;
+        public string Value2; //needed for between
         public ScanOptions ScanOption;
         public VarTypes VarType;
         public RoundingTypes RoundingType;
@@ -69,17 +71,18 @@ namespace CESDK
         public string AlignmentValue;
         public bool isHexadecimalInput;
         public bool isUTF16Scan;
-        public bool isCaseSensitive;
-        public bool isPercentageScan;
+        public bool isCaseSensitive; //for strings
+        public bool isPercentageScan; //next scan
 
         public ScanParameters()
         {
+            //default config
             ScanOption = ScanOptions.soExactValue;
             VarType = VarTypes.vtDword;
             RoundingType = RoundingTypes.rtExtremerounded;
             StartAddress = 0;
             StopAddress = (UInt64)(Int64.MaxValue);
-            ProtectionFlags = "+W-C";
+            ProtectionFlags = "+W-C"; //wirable, not copy-on-write, and ignore execute
             AlignmentType = FastScanMethods.fsmAligned;
             AlignmentValue = "4";
             isHexadecimalInput = false;
@@ -89,7 +92,7 @@ namespace CESDK
         }
     }
 
-    public class MemScan : CEObjectWrapper
+    class MemScan : CEObjectWrapper
     {
         private bool scanStarted;
 
@@ -99,16 +102,22 @@ namespace CESDK
         public dScanDone OnScanDone;
         public dGUIUpdate OnGuiUpdate;
 
+
         public void WaitTillDone()
         {
             lua.PushCEObject(CEObject);
             lua.PushString("waitTillDone");
             lua.GetTable(-2);
 
-            if (!lua.IsFunction(-1)) throw new System.ApplicationException("memscan object without a waitTillDone method");
+            if (lua.IsFunction(-1) == false) throw new System.ApplicationException("memscan object without a waitTillDone method");
 
             lua.PCall(0, 0);
             lua.SetTop(0);
+        }
+
+        public FoundList GetFoundList()
+        {
+            return new FoundList(this);
         }
 
         public void Scan(ScanParameters p)
@@ -117,11 +126,14 @@ namespace CESDK
             {
                 lua.PushCEObject(CEObject);
 
-                if (!scanStarted)
+
+                if (scanStarted == false)
                 {
+                    //first scan
                     lua.PushString("firstScan");
                     lua.GetTable(-2);
-                    if (!lua.IsFunction(-1)) throw new System.ApplicationException("memscan object without a firstScan method");
+
+                    if (lua.IsFunction(-1) == false) throw new System.ApplicationException("memscan object without a firstScan method");
 
                     lua.PushInteger((long)p.ScanOption);
                     lua.PushInteger((long)p.VarType);
@@ -134,7 +146,7 @@ namespace CESDK
                     lua.PushInteger((long)p.AlignmentType);
                     lua.PushString(p.AlignmentValue);
                     lua.PushBoolean(p.isHexadecimalInput);
-                    lua.PushBoolean(true);
+                    lua.PushBoolean(true); //isnotabinarystring
                     lua.PushBoolean(p.isUTF16Scan);
                     lua.PushBoolean(p.isCaseSensitive);
                     lua.PCall(14, 0);
@@ -143,9 +155,13 @@ namespace CESDK
                 }
                 else
                 {
+                    //next scan
                     lua.PushString("nextScan");
                     lua.GetTable(-2);
-                    if (!lua.IsFunction(-1)) throw new System.ApplicationException("memscan object without a nextScan method");
+
+                    //nextScan(scanoption, roundingtype, input1,input2, isHexadecimalInput, isNotABinaryString, isunicodescan, iscasesensitive, ispercentagescan, savedresultname OPTIONAL);
+
+                    if (lua.IsFunction(-1) == false) throw new System.ApplicationException("memscan object without a nextScan method");
 
                     lua.PushInteger((long)p.ScanOption);
                     lua.PushInteger((long)p.RoundingType);
@@ -163,15 +179,17 @@ namespace CESDK
             {
                 lua.SetTop(0);
             }
+
         }
 
         public void Reset()
         {
+            //new scan
             lua.PushCEObject(CEObject);
             lua.PushString("newScan");
             lua.GetTable(-2);
 
-            if (!lua.IsFunction(-1)) throw new System.ApplicationException("memscan object without a newScan method");
+            if (lua.IsFunction(-1) == false) throw new System.ApplicationException("memscan object without a newScan method");
 
             lua.PCall(0, 0);
             lua.SetTop(0);
@@ -181,26 +199,39 @@ namespace CESDK
 
         private int LScanDone(IntPtr L)
         {
-            OnScanDone?.Invoke(this);
+            //function(memscan) - called when the scan has finished
+            if (OnScanDone != null)
+                OnScanDone(this);
+
             return 0;
         }
 
         private int LGuiUpdate(IntPtr L)
         {
-            if (OnGuiUpdate != null && lua.GetTop() >= 4)
-                OnGuiUpdate(this, (UInt64)lua.ToInteger(2), (UInt64)lua.ToInteger(3), (UInt64)lua.ToInteger(4));
+            //function(memscan, TotalAddressesToScan, CurrentlyScanned, ResultsFound) - Called during the scan so you can update the interface if needed
+            if (OnGuiUpdate != null)
+            {
+                if (lua.GetTop() >= 4)
+                    OnGuiUpdate(this, (UInt64)lua.ToInteger(2), (UInt64)lua.ToInteger(3), (UInt64)lua.ToInteger(4));
+            }
+
             return 0;
         }
 
-        CESDKLua.LuaCall dLScanDone;
+        CESDKLua.LuaCall dLScanDone; //prevent garbage collection
         CESDKLua.LuaCall dLGuiUpdate;
 
+
+        /// <summary>
+        /// Gets a MemScan object from CE
+        /// </summary>
         public MemScan()
         {
             try
             {
                 lua.GetGlobal("createMemScan");
-                if (lua.IsNil(-1)) throw new System.ApplicationException("You have no createFoundList (WTF)");
+                if (lua.IsNil(-1))
+                    throw new System.ApplicationException("You have no createFoundList (WTF)");
 
                 lua.PCall(0, 1);
 
@@ -208,6 +239,7 @@ namespace CESDK
                 {
                     CEObject = lua.ToCEObject(-1);
 
+                    //setup what happens when the scan is done
                     dLScanDone = LScanDone;
                     dLGuiUpdate = LGuiUpdate;
 
@@ -218,40 +250,16 @@ namespace CESDK
                     lua.PushString("OnGuiUpdate");
                     lua.PushFunction(dLGuiUpdate);
                     lua.SetTable(-3);
+
                 }
                 else
                     throw new System.ApplicationException("No idea what it returned");
+
             }
             finally
             {
                 lua.SetTop(0);
             }
         }
-
-        /// <summary>
-        /// Returns a FoundList object attached to this MemScan, or null if none.
-        /// </summary>
-        public FoundList AttachedFoundList
-        {
-            get
-            {
-                lua.PushCEObject(CEObject);               // push the MemScan object
-                lua.PushString("getAttachedFoundlist");   // push the method name
-                lua.GetTable(-2);                         // get the function
-                lua.PCall(0, 1);                          // call the function
-
-                if (lua.IsNil(-1))                        // if result is nil, return null
-                {
-                    lua.SetTop(0);
-                    return null;
-                }
-
-                IntPtr foundListPtr = lua.ToCEObject(-1); // get raw CE object pointer
-                lua.SetTop(0);
-
-                return new FoundList(foundListPtr);       // wrap it in your FoundList class
-            }
-        }
-
     }
 }

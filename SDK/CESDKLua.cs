@@ -31,7 +31,7 @@ namespace CESDK
         public static extern bool FreeLibrary(IntPtr hModule);
 
 
-        private CESDK sdk;
+        private readonly CESDK sdk;
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate int LuaCall(IntPtr lua_State);
@@ -63,15 +63,19 @@ namespace CESDK
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_pushnil(IntPtr state);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int dlua_pushinteger(IntPtr state, [MarshalAs(UnmanagedType.I8)] Int64 i);
+        private delegate int dlua_pushinteger(IntPtr state, [MarshalAs(UnmanagedType.I8)] long i);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int dlua_pushnumber(IntPtr state, [MarshalAs(UnmanagedType.R8)] Double n);
+        private delegate int dlua_pushnumber(IntPtr state, [MarshalAs(UnmanagedType.R8)] double n);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_pushlstring(IntPtr state, [MarshalAs(UnmanagedType.LPStr)] string s, [MarshalAs(UnmanagedType.SysUInt)] IntPtr size);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_pushstring(IntPtr state, [MarshalAs(UnmanagedType.LPStr)] string s);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_pushboolean(IntPtr state, [MarshalAs(UnmanagedType.Bool)] bool b);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int dlua_newtable(IntPtr state);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int dlua_next(IntPtr state, int idx);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_type(IntPtr state, int idx);
 
@@ -88,7 +92,7 @@ namespace CESDK
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate double dlua_tonumberx(IntPtr state, int idx, [MarshalAs(UnmanagedType.I4)] ref int isnum);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate Int64 dlua_tointegerx(IntPtr state, int idx, [MarshalAs(UnmanagedType.I4)] ref int isnum);
+        private delegate long dlua_tointegerx(IntPtr state, int idx, [MarshalAs(UnmanagedType.I4)] ref int isnum);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate bool dlua_toboolean(IntPtr state, int idx);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -100,15 +104,9 @@ namespace CESDK
         private delegate int dlua_rawlen(IntPtr state, int idx);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int dlua_newtable(IntPtr state);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_gettable(IntPtr state, int idx);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate int dlua_settable(IntPtr state, int idx);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int dlua_getfield(IntPtr state, int idx, [MarshalAs(UnmanagedType.LPStr)] string k);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int dlua_next(IntPtr state, int idx);
 
 
 
@@ -137,51 +135,50 @@ namespace CESDK
 
         //lua related sdk exports:
         private dGetLuaState _GetLuaState;
-        private dLuaRegister LuaRegister;
-        private dLuaPushClassInstance LuaPushClassInstance;
+        private readonly dLuaRegister LuaRegister;
+        private readonly dLuaPushClassInstance LuaPushClassInstance;
 
 
         //local native lua functions
-        private dlua_gettop lua_gettop;
-        private dlua_settop lua_settop;
-        private dlua_pushvalue lua_pushvalue;
-        private dlua_rotate lua_rotate;
-        private dlua_copy lua_copy;
-        private dlua_pushcclosure lua_pushcclosure;
-        private dlua_setglobal lua_setglobal;
-        private dlua_getglobal lua_getglobal;
-        private dlua_pushnil lua_pushnil;
-        private dlua_pushinteger lua_pushinteger;
-        private dlua_pushnumber lua_pushnumber;
-        private dlua_pushlstring lua_pushlstring;
-        private dlua_pushstring lua_pushstring;
-        private dlua_pushboolean lua_pushboolean;
-        private dlua_type lua_type;
-        private dlua_isnumber lua_isnumber;
-        private dlua_isinteger lua_isinteger;
-        private dlua_isstring lua_isstring;
-        private dlua_iscfunction lua_iscfunction;
-        private dlua_isuserdata lua_isuserdata;
-        private dlua_tonumberx lua_tonumberx;
-        private dlua_tointegerx lua_tointegerx;
-        private dlua_toboolean lua_toboolean;
-        private dlua_tolstring lua_tolstring;
-        private dlua_touserdata lua_touserdata;
-        private dlua_rawlen lua_rawlen;
-        private dlua_newtable lua_newtable;
-        private dlua_gettable lua_gettable;
-        private dlua_settable lua_settable;
-        private dlua_getfield lua_getfield;
-        private dlua_next lua_next;
-        private dlua_callk lua_callk;
-        private dlua_pcallk lua_pcallk;
+        private readonly dlua_gettop lua_gettop;
+        private readonly dlua_settop lua_settop;
+        private readonly dlua_pushvalue lua_pushvalue;
+        private readonly dlua_rotate lua_rotate;
+        private readonly dlua_copy lua_copy;
+        private readonly dlua_pushcclosure lua_pushcclosure;
+        private readonly dlua_setglobal lua_setglobal;
+        private readonly dlua_getglobal lua_getglobal;
+        private readonly dlua_pushnil lua_pushnil;
+        private readonly dlua_pushinteger lua_pushinteger;
+        private readonly dlua_pushnumber lua_pushnumber;
+        private readonly dlua_pushlstring lua_pushlstring;
+        private readonly dlua_pushstring lua_pushstring;
+        private readonly dlua_pushboolean lua_pushboolean;
+        private readonly dlua_newtable lua_newtable;
+        private readonly dlua_next lua_next;
+        private readonly dlua_type lua_type;
+        private readonly dlua_isnumber lua_isnumber;
+        private readonly dlua_isinteger lua_isinteger;
+        private readonly dlua_isstring lua_isstring;
+        private readonly dlua_iscfunction lua_iscfunction;
+        private readonly dlua_isuserdata lua_isuserdata;
+        private readonly dlua_tonumberx lua_tonumberx;
+        private readonly dlua_tointegerx lua_tointegerx;
+        private readonly dlua_toboolean lua_toboolean;
+        private readonly dlua_tolstring lua_tolstring;
+        private readonly dlua_touserdata lua_touserdata;
+        private readonly dlua_rawlen lua_rawlen;
+        private readonly dlua_gettable lua_gettable;
+        private readonly dlua_settable lua_settable;
+        private readonly dlua_callk lua_callk;
+        private readonly dlua_pcallk lua_pcallk;
 
-        private dluaL_loadstring luaL_loadstring;
+        private readonly dluaL_loadstring luaL_loadstring;
 
 
         public IntPtr State { get { return GetLuaState(); } }
 
-        private static List<LuaCall> luafunctions = new List<LuaCall>();
+        private static readonly List<LuaCall> luafunctions = [];
 
         //c# versions
         public int GetTop() { return lua_gettop(State); }
@@ -255,11 +252,11 @@ namespace CESDK
             LuaRegister(State, FuncName, z);
         }
 
-        public void PushInteger(Int64 i) { lua_pushinteger(State, i); }
-        public void PushInteger(IntPtr L, Int64 i) { lua_pushinteger(L, i); }
+        public void PushInteger(long i) { lua_pushinteger(State, i); }
+        public void PushInteger(IntPtr L, long i) { lua_pushinteger(L, i); }
 
-        public void PushNumber(Double n) { lua_pushnumber(State, n); }
-        public void PushNumber(IntPtr L, Double n) { lua_pushnumber(L, n); }
+        public void PushNumber(double n) { lua_pushnumber(State, n); }
+        public void PushNumber(IntPtr L, double n) { lua_pushnumber(L, n); }
 
         public void PushLString(string s, IntPtr size) { lua_pushlstring(State, s, size); }
         public void PushLString(IntPtr L, string s, IntPtr size) { lua_pushlstring(L, s, size); }
@@ -270,67 +267,70 @@ namespace CESDK
         public void PushBoolean(bool b) { lua_pushboolean(State, b); }
         public void PushBoolean(IntPtr L, bool b) { lua_pushboolean(L, b); }
 
-        public void PushCEObject(IntPtr L, IntPtr ceobject) { LuaPushClassInstance(L, ceobject); }
-        public void PushCEObject(IntPtr ceobject) { LuaPushClassInstance(State, ceobject); }
-
         public void PushNil() { lua_pushnil(State); }
         public void PushNil(IntPtr L) { lua_pushnil(L); }
+
+        public void NewTable() { lua_newtable(State); }
+        public void NewTable(IntPtr L) { lua_newtable(L); }
 
         public int Next(int idx) { return lua_next(State, idx); }
         public int Next(IntPtr L, int idx) { return lua_next(L, idx); }
 
+        public void PushCEObject(IntPtr L, IntPtr ceobject) { LuaPushClassInstance(L, ceobject); }
+        public void PushCEObject(IntPtr ceobject) { LuaPushClassInstance(State, ceobject); }
 
-        public Boolean IsFunction(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TFUNCTION; }
-        public Boolean IsFunction(int idx) { return lua_type(State, idx) == LUA_TFUNCTION; }
-        public Boolean IsTable(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TTABLE; }
-        public Boolean IsTable(int idx) { return lua_type(State, idx) == LUA_TTABLE; }
-        public Boolean IsLightUserdata(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TLIGHTUSERDATA; }
-        public Boolean IsLightUserdata(int idx) { return lua_type(State, idx) == LUA_TLIGHTUSERDATA; }
-        public Boolean IsHeavyUserdata(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TUSERDATA; }
-        public Boolean IsHeavyUserdata(int idx) { return lua_type(State, idx) == LUA_TUSERDATA; }
-        public Boolean IsNil(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TNIL; }
-        public Boolean IsNil(int idx) { return lua_type(State, idx) == LUA_TNIL; }
-        public Boolean IsBoolean(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TBOOLEAN; }
-        public Boolean IsBoolean(int idx) { return lua_type(State, idx) == LUA_TBOOLEAN; }
-        public Boolean IsThread(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TTHREAD; }
-        public Boolean IsThread(int idx) { return lua_type(State, idx) == LUA_TTHREAD; }
-        public Boolean IsNone(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TNONE; }
-        public Boolean IsNone(int idx) { return lua_type(State, idx) == LUA_TNONE; }
-        public Boolean IsNoneOrNil(IntPtr L, int idx) { return lua_type(L, idx) <= 0; }
-        public Boolean IsNoneOrNil(int idx) { return lua_type(State, idx) <= 0; }
 
-        public Boolean IsNumber(IntPtr L, int idx) { return lua_isnumber(L, idx); }
-        public Boolean IsNumber(int idx) { return lua_isnumber(State, idx); }
-        public Boolean IsInteger(IntPtr L, int idx) { return lua_isinteger(L, idx); }
-        public Boolean IsInteger(int idx) { return lua_isinteger(State, idx); }
-        public Boolean IsString(IntPtr L, int idx) { return lua_isstring(L, idx); }
-        public Boolean IsString(int idx) { return lua_isstring(State, idx); }
-        public Boolean IsCFunction(IntPtr L, int idx) { return lua_iscfunction(L, idx); }
-        public Boolean IsCFunction(int idx) { return lua_iscfunction(State, idx); }
-        public Boolean IsUserData(IntPtr L, int idx) { return lua_isuserdata(L, idx); }
-        public Boolean IsUserData(int idx) { return lua_isuserdata(State, idx); }
-        public Boolean IsCEObject(IntPtr L, int idx) { return IsHeavyUserdata(L, idx); }
-        public Boolean IsCEObject(int idx) { return IsHeavyUserdata(State, idx); }
+        public bool IsFunction(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TFUNCTION; }
+        public bool IsFunction(int idx) { return lua_type(State, idx) == LUA_TFUNCTION; }
+        public bool IsTable(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TTABLE; }
+        public bool IsTable(int idx) { return lua_type(State, idx) == LUA_TTABLE; }
+        public bool IsLightUserdata(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TLIGHTUSERDATA; }
+        public bool IsLightUserdata(int idx) { return lua_type(State, idx) == LUA_TLIGHTUSERDATA; }
+        public bool IsHeavyUserdata(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TUSERDATA; }
+        public bool IsHeavyUserdata(int idx) { return lua_type(State, idx) == LUA_TUSERDATA; }
+        public bool IsNil(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TNIL; }
+        public bool IsNil(int idx) { return lua_type(State, idx) == LUA_TNIL; }
+        public bool IsBoolean(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TBOOLEAN; }
+        public bool IsBoolean(int idx) { return lua_type(State, idx) == LUA_TBOOLEAN; }
+        public bool IsThread(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TTHREAD; }
+        public bool IsThread(int idx) { return lua_type(State, idx) == LUA_TTHREAD; }
+        public bool IsNone(IntPtr L, int idx) { return lua_type(L, idx) == LUA_TNONE; }
+        public bool IsNone(int idx) { return lua_type(State, idx) == LUA_TNONE; }
+        public bool IsNoneOrNil(IntPtr L, int idx) { return lua_type(L, idx) <= 0; }
+        public bool IsNoneOrNil(int idx) { return lua_type(State, idx) <= 0; }
+
+        public bool IsNumber(IntPtr L, int idx) { return lua_isnumber(L, idx); }
+        public bool IsNumber(int idx) { return lua_isnumber(State, idx); }
+        public bool IsInteger(IntPtr L, int idx) { return lua_isinteger(L, idx); }
+        public bool IsInteger(int idx) { return lua_isinteger(State, idx); }
+        public bool IsString(IntPtr L, int idx) { return lua_isstring(L, idx); }
+        public bool IsString(int idx) { return lua_isstring(State, idx); }
+        public bool IsCFunction(IntPtr L, int idx) { return lua_iscfunction(L, idx); }
+        public bool IsCFunction(int idx) { return lua_iscfunction(State, idx); }
+        public bool IsUserData(IntPtr L, int idx) { return lua_isuserdata(L, idx); }
+        public bool IsUserData(int idx) { return lua_isuserdata(State, idx); }
+        public bool IsCEObject(IntPtr L, int idx) { return IsHeavyUserdata(L, idx); }
+        public bool IsCEObject(int idx) { return IsHeavyUserdata(State, idx); }
 
 
 
         public double ToNumber(IntPtr L, int idx) { int isnumber = 0; return lua_tonumberx(L, idx, ref isnumber); }
         public double ToNumber(int idx) { return ToNumber(State, idx); }
-        public Int64 ToInteger(IntPtr L, int idx)
+        public long ToInteger(IntPtr L, int idx)
         {
             int isnumber = 0;
-            Int64 r = lua_tointegerx(L, idx, ref isnumber);
+            long r = lua_tointegerx(L, idx, ref isnumber);
 
             if (isnumber == 0)
             {
-                r = (Int64)lua_tonumberx(L, idx, ref isnumber);
+                r = (long)lua_tonumberx(L, idx, ref isnumber);
                 if (isnumber == 0)
                     return 0;
             }
 
             return r;
         }
-        public Int64 ToInteger(int idx) { return ToInteger(State, idx); }
+        public long ToInteger(int idx) { return ToInteger(State, idx); }
 
         public bool ToBoolean(IntPtr L, int idx) { return lua_toboolean(L, idx); }
         public bool ToBoolean(int idx) { return lua_toboolean(State, idx); }
@@ -354,13 +354,10 @@ namespace CESDK
 
         public int ObjLen(IntPtr L, int idx) { return lua_rawlen(L, idx); }
         public int ObjLen(int idx) { return lua_rawlen(State, idx); }
-        public int NewTable() { return lua_newtable(State); }
         public int GetTable(IntPtr L, int idx) { return lua_gettable(L, idx); }
         public int GetTable(int idx) { return lua_gettable(State, idx); }
         public int SetTable(IntPtr L, int idx) { return lua_settable(L, idx); }
         public int SetTable(int idx) { return lua_settable(State, idx); }
-        public int GetField(IntPtr L, int idx, string k) { return lua_getfield(L, idx, k); }
-        public int GetField(int idx, string k) { return lua_getfield(State, idx, k); }
 
         public string ToString(IntPtr L, int idx)
         {
@@ -439,6 +436,8 @@ namespace CESDK
                 lua_pushlstring = Marshal.GetDelegateForFunctionPointer<dlua_pushlstring>(GetProcAddress(hLibLua, "lua_pushlstring"));
                 lua_pushstring = Marshal.GetDelegateForFunctionPointer<dlua_pushstring>(GetProcAddress(hLibLua, "lua_pushstring"));
                 lua_pushboolean = Marshal.GetDelegateForFunctionPointer<dlua_pushboolean>(GetProcAddress(hLibLua, "lua_pushboolean"));
+                lua_newtable = Marshal.GetDelegateForFunctionPointer<dlua_newtable>(GetProcAddress(hLibLua, "lua_newtable"));
+                lua_next = Marshal.GetDelegateForFunctionPointer<dlua_next>(GetProcAddress(hLibLua, "lua_next"));
 
 
                 lua_type = Marshal.GetDelegateForFunctionPointer<dlua_type>(GetProcAddress(hLibLua, "lua_type"));
@@ -460,9 +459,6 @@ namespace CESDK
 
                 lua_gettable = Marshal.GetDelegateForFunctionPointer<dlua_gettable>(GetProcAddress(hLibLua, "lua_gettable"));
                 lua_settable = Marshal.GetDelegateForFunctionPointer<dlua_settable>(GetProcAddress(hLibLua, "lua_settable"));
-                lua_newtable = Marshal.GetDelegateForFunctionPointer<dlua_newtable>(GetProcAddress(hLibLua, "lua_newtable"));
-                lua_getfield = Marshal.GetDelegateForFunctionPointer<dlua_getfield>(GetProcAddress(hLibLua, "lua_getfield"));
-                lua_next = Marshal.GetDelegateForFunctionPointer<dlua_next>(GetProcAddress(hLibLua, "lua_next"));
 
 
 

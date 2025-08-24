@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CESDK;
 
 namespace CeMCP.Models
@@ -156,9 +157,52 @@ namespace CeMCP.Models
         public bool IsPercentageScan { get; set; } = false; // next scan
     }
 
+    public class ResultItem
+    {
+        public string Address { get; set; }
+        public string Value { get; set; }
+
+        public ResultItem(string address, string value)
+        {
+            Address = address;
+            Value = value;
+        }
+    }
+
+    public class ResultList
+    {
+        private readonly List<ResultItem> _items = new();
+        private const int MaxStored = 1000;
+
+        /// <summary>
+        /// Total number of results (set this manually).
+        /// </summary>
+        public int TotalCount { get; set; }
+
+        /// <summary>
+        /// Number of results actually stored (capped at MaxStored).
+        /// </summary>
+        public int StoredCount => _items.Count;
+
+        public string this[int index] => _items[index].Address;
+        public string GetAddress(int index) => _items[index].Address;
+        public string GetValue(int index) => _items[index].Value;
+        public ResultItem GetResult(int index) => _items[index];
+
+        public void Add(string address, string value)
+        {
+            if (_items.Count < MaxStored)
+            {
+                _items.Add(new ResultItem(address, value));
+            }
+        }
+    }
+
+
+
+
     public class MemScanResponse : BaseResponse
     {
-        public FoundList FoundList { get; set; } = new FoundList(IntPtr.Zero);
-
+        public ResultList Results { get; set; } = new ResultList();
     }
 }
