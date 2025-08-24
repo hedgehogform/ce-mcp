@@ -14,7 +14,7 @@ namespace CeMCP
         private readonly ConversionTool _conversionTool = new ConversionTool();
         private readonly AobScanTool _aobScanTool = new AobScanTool();
         private readonly DisassembleTool _disassembleTool = new DisassembleTool();
-        private readonly MemScanTool _memScanTool = new MemScanTool();
+        private static readonly MemScanTool _memScanTool = new MemScanTool();
 
         public LuaResponse ExecuteLua(LuaRequest request)
         {
@@ -69,6 +69,11 @@ namespace CeMCP
         public MemScanResponse Scan(MemScanScanRequest request)
         {
             return _memScanTool.Scan(request);
+        }
+
+        public MemScanResponse ResetScan()
+        {
+            return _memScanTool.ResetScan();
         }
     }
 }

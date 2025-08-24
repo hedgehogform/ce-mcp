@@ -4,7 +4,8 @@
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:devblogs.microsoft.com)",
       "WebFetch(domain:github.com)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Read(/C:\\Users\\Shadow\\Documents\\Coding\\cheat-engine\\Cheat Engine\\bin/**)"
     ],
     "deny": [],
     "ask": []

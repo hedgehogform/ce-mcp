@@ -29,7 +29,7 @@ namespace CeMCP
 
             sdk.lua.DoString(@"
                 local m=MainForm.Menu
-                local topm=createMenuItem(m)
+                topm=createMenuItem(m)
                 topm.Caption='MCP'
                 m.Items.insert(MainForm.miHelp.MenuIndex,topm)
 
@@ -54,6 +54,23 @@ namespace CeMCP
         public override bool DisablePlugin()
         {
             StopMCPServer();
+            
+            // Remove menu items
+            sdk.lua.DoString(@"
+                if mcpToggleMenuItem then
+                    mcpToggleMenuItem.destroy()
+                    mcpToggleMenuItem = nil
+                end
+                if mcpConfigMenuItem then
+                    mcpConfigMenuItem.destroy()
+                    mcpConfigMenuItem = nil
+                end
+                if topm then
+                    topm.destroy()
+                    topm = nil
+                end
+            ");
+            
             return true;
         }
 

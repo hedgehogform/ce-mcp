@@ -86,6 +86,13 @@ namespace CeMCP.Controllers
             return tools.Scan(request);
         }
 
+        [HttpPost]
+        [Route("memscan-reset")]
+        public MemScanResponse MemScanReset()
+        {
+            return tools.ResetScan();
+        }
+
         [HttpGet]
         [Route("health")]
         public IHttpActionResult GetHealth()

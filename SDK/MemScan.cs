@@ -115,10 +115,31 @@ namespace CESDK
             lua.SetTop(0);
         }
 
+        public void SaveCurrentResults(string name)
+        {
+            try
+            {
+                lua.PushCEObject(CEObject);
+                lua.PushString("saveCurrentResults");
+                lua.GetTable(-2);
+
+                if (lua.IsFunction(-1) == false)
+                    throw new System.ApplicationException("memscan object without a saveCurrentResults method");
+
+                lua.PushString(name);
+                lua.PCall(1, 0);
+            }
+            finally
+            {
+                lua.SetTop(0);
+            }
+        }
+
         public FoundList GetFoundList()
         {
             return new FoundList(this);
         }
+
 
         public void Scan(ScanParameters p)
         {

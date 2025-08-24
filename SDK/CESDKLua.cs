@@ -411,6 +411,51 @@ namespace CESDK
             return _GetLuaState();
         }
 
+        public class LuaTable
+        {
+            private readonly CESDKLua lua;
+            private readonly int index;
+
+            public LuaTable(CESDKLua lua, int index)
+            {
+                this.lua = lua;
+                this.index = index;
+            }
+
+            // Simple accessor to get all key-value pairs as a dictionary
+            public Dictionary<string, object> ToDictionary()
+            {
+                Dictionary<string, object> result = new Dictionary<string, object>();
+
+                lua.PushValue(index); // Push table to top of stack
+                lua.PushNil();        // First key
+                while (lua.Next(-2) != 0) // while lua_next returns nonzero
+                {
+                    string key = lua.ToString(-2);
+                    object value = null;
+
+                    if (lua.IsString(-1)) value = lua.ToString(-1);
+                    else if (lua.IsNumber(-1)) value = lua.ToNumber(-1);
+                    else if (lua.IsBoolean(-1)) value = lua.ToBoolean(-1);
+                    else if (lua.IsTable(-1)) value = new LuaTable(lua, lua.GetTop()).ToDictionary(); // recursive
+                    else value = null;
+
+                    result[key] = value;
+
+                    lua.Pop(1); // remove value, keep key for next iteration
+                }
+                lua.Pop(1); // pop table
+                return result;
+            }
+        }
+
+        // Add helper to CESDKLua
+        public LuaTable ToTable(int idx)
+        {
+            if (!IsTable(idx)) throw new ApplicationException("Stack item is not a table");
+            return new LuaTable(this, idx);
+        }
+
         public CESDKLua(CESDK sdk)
         {
             //init lua

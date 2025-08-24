@@ -77,7 +77,7 @@ namespace CESDK
             return "Error";
         }
 
-        public void Initialize()
+        private void Initialize()
         {
             try
             {
@@ -97,6 +97,44 @@ namespace CESDK
             }
         }
 
+        private void Deinitialize()
+        {
+            try
+            {
+                lua.PushCEObject(CEObject);
+
+                lua.PushString("deinitialize");
+                lua.GetTable(-2);
+
+                if (lua.IsFunction(-1) == false)
+                    throw new System.ApplicationException("foundlist with no deinitialize method");
+
+                lua.PCall(0, 0);
+            }
+            finally
+            {
+                lua.SetTop(0);
+            }
+        }
+
+        ~FoundList()
+        {
+            if (CEObject != IntPtr.Zero)
+            {
+                Deinitialize();
+            }
+        }
+
+        public FoundList()
+        {
+            // Empty constructor for when CEObject is set externally
+        }
+
+        public void SetCEObject(IntPtr ceObject)
+        {
+            CEObject = ceObject;
+        }
+
         public FoundList(MemScan ms)
         {
             try
@@ -108,16 +146,36 @@ namespace CESDK
                 lua.PushCEObject(ms.obj);
                 int pcr = lua.PCall(1, 1);
 
+                if (pcr != 0)
+                {
+                    string error = lua.ToString(-1);
+                    throw new System.ApplicationException($"createFoundList failed: {error}");
+                }
+
                 if (lua.IsCEObject(-1))
+                {
                     CEObject = lua.ToCEObject(-1);
+                    try
+                    {
+                        // Initialize the foundlist to open the results for reading
+                        Initialize();
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new System.ApplicationException($"FoundList Initialize failed: {ex.Message}", ex);
+                    }
+                }
                 else
-                    throw new System.ApplicationException("No idea what it returned");
+                    throw new System.ApplicationException($"createFoundList returned unexpected type: {lua.Type(-1)}");
+            }
+            catch (Exception ex)
+            {
+                throw new System.ApplicationException($"FoundList constructor failed: {ex.Message}", ex);
             }
             finally
             {
                 lua.SetTop(0);
             }
-
         }
 
 

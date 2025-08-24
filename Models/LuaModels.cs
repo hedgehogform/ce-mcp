@@ -184,6 +184,11 @@ namespace CeMCP.Models
         /// </summary>
         public int StoredCount => _items.Count;
 
+        /// <summary>
+        /// The actual results (addresses and values).
+        /// </summary>
+        public List<ResultItem> Items => _items;
+
         public string this[int index] => _items[index].Address;
         public string GetAddress(int index) => _items[index].Address;
         public string GetValue(int index) => _items[index].Value;
