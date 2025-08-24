@@ -48,11 +48,15 @@ namespace CeMCP.Tools
                         value = memoryRead.ReadBytes(request.Address, request.ByteCount.Value, request.ReturnAsTable ?? true);
                         break;
 
-                    case "integer" or "int32" or "int":
+                    case "integer":
+                    case "int32":
+                    case "int":
                         value = memoryRead.ReadInteger(request.Address, request.Signed ?? false);
                         break;
 
-                    case "qword" or "int64" or "long":
+                    case "qword":
+                    case "int64":
+                    case "long":
                         value = memoryRead.ReadQword(request.Address);
                         break;
 

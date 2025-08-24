@@ -1,4 +1,3 @@
-#nullable enable
 using System;
 using System.IO;
 using System.Text.Json;
@@ -77,9 +76,9 @@ namespace CeMCP
 
         private sealed class ConfigData
         {
-            public string? Host { get; set; }
+            public string Host { get; set; }
             public int Port { get; set; }
-            public string? ServerName { get; set; }
+            public string ServerName { get; set; }
         }
     }
 }

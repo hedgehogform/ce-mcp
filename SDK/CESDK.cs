@@ -149,7 +149,8 @@ namespace CESDK
 
         public static int CEPluginInitialize(string parameters)
         {
-            mainself ??= new CESDK();
+            if (mainself == null)
+                mainself = new CESDK();
 
             if ((long)PluginNamePtr == 0)
             {

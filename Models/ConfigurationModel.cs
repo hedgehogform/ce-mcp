@@ -85,14 +85,15 @@ namespace CeMCP.Models
                     OnPropertyChanged();
 
                     // Update color based on status
-                    ServerStatusColor = value.ToLower() switch
-                    {
-                        "running" => Brushes.Green,
-                        "stopped" => Brushes.Red,
-                        "starting" => Brushes.Orange,
-                        "stopping" => Brushes.Orange,
-                        _ => Brushes.Gray
-                    };
+                    string lowerStatus = value.ToLower();
+                    if (lowerStatus == "running")
+                        ServerStatusColor = Brushes.Green;
+                    else if (lowerStatus == "stopped")
+                        ServerStatusColor = Brushes.Red;
+                    else if (lowerStatus == "starting" || lowerStatus == "stopping")
+                        ServerStatusColor = Brushes.Orange;
+                    else
+                        ServerStatusColor = Brushes.Gray;
 
                     IsServerRunning = value.ToLower() == "running";
                     OnPropertyChanged(nameof(StartStopButtonText));

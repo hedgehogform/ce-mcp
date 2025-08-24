@@ -7,13 +7,15 @@ namespace CESDK
     {
         private static string GetLuaFunction(string conversionType)
         {
-            return conversionType.ToLower() switch
-            {
-                "ansitoutf8" => "ansiToUtf8",
-                "utf8toansi" => "utf8ToAnsi",
-                "stringtomd5string" or "stringtomd5" or "md5" => "stringToMD5String",
-                _ => null
-            };
+            string lowerType = conversionType.ToLower();
+            if (lowerType == "ansitoutf8")
+                return "ansiToUtf8";
+            else if (lowerType == "utf8toansi")
+                return "utf8ToAnsi";
+            else if (lowerType == "stringtomd5string" || lowerType == "stringtomd5" || lowerType == "md5")
+                return "stringToMD5String";
+            else
+                return null;
         }
 
         public string CallLuaStringFunction(string functionName, string input)
@@ -35,13 +37,15 @@ namespace CESDK
                 throw new ArgumentException($"Unsupported conversion type: {conversionType}");
             }
 
-            return conversionType.ToLower() switch
-            {
-                "ansitoutf8" => CallLuaStringFunction("ansiToUtf8", input),
-                "utf8toansi" => CallLuaStringFunction("utf8ToAnsi", input),
-                "md5" => CallLuaStringFunction("stringToMD5String", input),
-                _ => throw new ArgumentException($"Unsupported conversion type: {conversionType}"),
-            };
+            string lowerType = conversionType.ToLower();
+            if (lowerType == "ansitoutf8")
+                return CallLuaStringFunction("ansiToUtf8", input);
+            else if (lowerType == "utf8toansi")
+                return CallLuaStringFunction("utf8ToAnsi", input);
+            else if (lowerType == "md5")
+                return CallLuaStringFunction("stringToMD5String", input);
+            else
+                throw new ArgumentException($"Unsupported conversion type: {conversionType}");
         }
     }
 }

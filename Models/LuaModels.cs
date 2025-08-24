@@ -171,7 +171,7 @@ namespace CeMCP.Models
 
     public class ResultList
     {
-        private readonly List<ResultItem> _items = new();
+        private readonly List<ResultItem> _items = new List<ResultItem>();
         private const int MaxStored = 1000;
 
         /// <summary>

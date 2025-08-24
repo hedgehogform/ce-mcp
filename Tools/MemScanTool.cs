@@ -9,14 +9,14 @@ namespace CESDK
 {
     public class MemScanTool
     {
-        private readonly MemScan memScan = new();
+        private readonly MemScan memScan = new MemScan();
 
 
 
         public MemScanResponse Scan(MemScanScanRequest request)
         {
             // Convert MemScanScanRequest to ScanParameters
-            ScanParameters parameters = new()
+            ScanParameters parameters = new ScanParameters()
             {
                 Value = request.Input1,
                 Value2 = request.Input2,

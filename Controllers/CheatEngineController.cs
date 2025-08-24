@@ -4,9 +4,9 @@ using CeMCP.Models;
 namespace CeMCP.Controllers
 {
     [RoutePrefix("api/cheatengine")]
-    public class CheatEngineController() : ApiController
+    public class CheatEngineController : ApiController
     {
-        private readonly CheatEngineTools tools = new();
+        private readonly CheatEngineTools tools = new CheatEngineTools();
 
 
         [HttpPost]

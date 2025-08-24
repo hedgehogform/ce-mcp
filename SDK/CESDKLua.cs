@@ -178,7 +178,7 @@ namespace CESDK
 
         public IntPtr State { get { return GetLuaState(); } }
 
-        private static readonly List<LuaCall> luafunctions = [];
+        private static readonly List<LuaCall> luafunctions = new List<LuaCall>();
 
         //c# versions
         public int GetTop() { return lua_gettop(State); }

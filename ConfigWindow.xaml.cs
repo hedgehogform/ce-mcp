@@ -53,11 +53,13 @@ namespace CeMCP
             _viewModel.TestResult = "Testing connection...";
             try
             {
-                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                var response = await client.GetAsync($"{_viewModel.BaseUrl}/api/cheatengine/health");
-                _viewModel.TestResult = response.IsSuccessStatusCode
-                    ? "✓ Connection successful! Server is responding."
-                    : $"✗ Server responded with status: {response.StatusCode}";
+                using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) })
+                {
+                    var response = await client.GetAsync($"{_viewModel.BaseUrl}/api/cheatengine/health");
+                    _viewModel.TestResult = response.IsSuccessStatusCode
+                        ? "✓ Connection successful! Server is responding."
+                        : $"✗ Server responded with status: {response.StatusCode}";
+                }
             }
             catch (HttpRequestException ex)
             {

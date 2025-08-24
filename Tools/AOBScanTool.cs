@@ -31,7 +31,7 @@ namespace CeMCP.Tools
                 return new AobScanResponse
                 {
                     Success = true,
-                    Addresses = [.. addresses]
+                    Addresses = addresses.ToArray()
                 };
             }
             catch (Exception ex)

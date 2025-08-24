@@ -1,6 +1,7 @@
 using System;
 using CESDK;
 using CeMCP.Models;
+using System.Linq;
 
 namespace CeMCP.Tools
 {
@@ -16,15 +17,20 @@ namespace CeMCP.Tools
                     return validation;
 
                 var memoryWrite = new MemoryWrite();
-                object value = request.DataType.ToLower() switch
-                {
-                    "bytes" => WriteBytes(memoryWrite, request),
-                    "integer" or "int32" or "int" => WriteInteger(memoryWrite, request),
-                    "qword" or "int64" or "long" => WriteQword(memoryWrite, request),
-                    "float" => WriteFloat(memoryWrite, request),
-                    "string" => WriteString(memoryWrite, request),
-                    _ => null
-                };
+                object value;
+                string dataType = request.DataType.ToLower();
+                if (dataType == "bytes")
+                    value = WriteBytes(memoryWrite, request);
+                else if (dataType == "integer" || dataType == "int32" || dataType == "int")
+                    value = WriteInteger(memoryWrite, request);
+                else if (dataType == "qword" || dataType == "int64" || dataType == "long")
+                    value = WriteQword(memoryWrite, request);
+                else if (dataType == "float")
+                    value = WriteFloat(memoryWrite, request);
+                else if (dataType == "string")
+                    value = WriteString(memoryWrite, request);
+                else
+                    value = null;
 
                 if (value == null && !string.Equals(request.DataType, "bytes", StringComparison.OrdinalIgnoreCase))
                 {
@@ -66,7 +72,7 @@ namespace CeMCP.Tools
         }
 
         private MemoryWriteResponse Error(string message) =>
-            new()
+            new MemoryWriteResponse
             { Value = null, Success = false, Error = message };
 
         private static object WriteBytes(MemoryWrite memoryWrite, MemoryWriteRequest request)
@@ -120,7 +126,7 @@ namespace CeMCP.Tools
             string text = request.Value?.ToString() ?? throw new ArgumentException("String value is required");
 
             if (request.MaxLength.HasValue && text.Length > request.MaxLength.Value)
-                text = text[..request.MaxLength.Value];
+                text = text.Substring(0, request.MaxLength.Value);
 
             memoryWrite.WriteString(request.Address, text, request.WideChar ?? false);
             return text;
