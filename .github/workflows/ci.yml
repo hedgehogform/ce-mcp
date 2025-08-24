@@ -19,19 +19,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "4.8.x"
-
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Restore NuGet packages
+        run: nuget restore CeMCP.sln
 
       - name: Build ${{ matrix.configuration }}
-        run: dotnet build --configuration ${{ matrix.configuration }} --no-restore
+        run: msbuild CeMCP.sln /p:Configuration=${{ matrix.configuration }} /p:Platform="Any CPU"
 
       - name: Upload build artifacts (${{ matrix.configuration }})
         uses: actions/upload-artifact@v4
