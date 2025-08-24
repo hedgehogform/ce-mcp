@@ -105,22 +105,19 @@ namespace CeMCP
                                 System.Windows.Threading.DispatcherPriority.Background);
                         };
 
-                        // Start WPF message loop safely
+                        // Show the window and start WPF message loop
+                        configWindow.Show();
                         System.Windows.Threading.Dispatcher.Run();
                     }
                     catch (Exception ex)
                     {
                         sdk.lua.DoString($"print('Error in config window thread: {ex.Message}')");
                         configWindow = null;
-                        configThread = null;
                     }
                 });
 
                 configThread.SetApartmentState(ApartmentState.STA);
                 configThread.Start();
-
-                // Ensure window is shown on main thread safely
-                sdk.CheckSynchronize(50);
 
                 return 1;
             }
