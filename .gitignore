@@ -381,3 +381,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 cheat-engine/
+ce-mcp-client/
