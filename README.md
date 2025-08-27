@@ -5,6 +5,10 @@
 
 A Model Context Protocol (MCP) server plugin for Cheat Engine that provides access to Cheat Engine functionality.
 
+## Related Projects
+
+- **Python MCP Client**: [hedgehogform/ce-mcp-client](https://github.com/hedgehogform/ce-mcp-client) - Python FastMCP server for AI integration
+
 ## Current Features
 
 - Execute Lua code in Cheat Engine
