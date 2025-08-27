@@ -87,7 +87,7 @@ namespace CESDK
                 lua.GetTable(-2);
 
                 if (lua.IsFunction(-1) == false)
-                    throw new System.ApplicationException("foundlist with no initialize method");
+                    throw new InvalidOperationException("foundlist with no initialize method");
 
                 lua.PCall(0, 0);
             }
@@ -107,7 +107,7 @@ namespace CESDK
                 lua.GetTable(-2);
 
                 if (lua.IsFunction(-1) == false)
-                    throw new System.ApplicationException("foundlist with no deinitialize method");
+                    throw new InvalidOperationException("foundlist with no deinitialize method");
 
                 lua.PCall(0, 0);
             }
@@ -141,7 +141,7 @@ namespace CESDK
             {
                 lua.GetGlobal("createFoundList");
                 if (lua.IsNil(-1))
-                    throw new System.ApplicationException("You have no createFoundList (WTF)");
+                    throw new InvalidOperationException("createFoundList function is not available in Cheat Engine");
 
                 lua.PushCEObject(ms.obj);
                 int pcr = lua.PCall(1, 1);
@@ -149,7 +149,7 @@ namespace CESDK
                 if (pcr != 0)
                 {
                     string error = lua.ToString(-1);
-                    throw new System.ApplicationException($"createFoundList failed: {error}");
+                    throw new InvalidOperationException($"createFoundList failed: {error}");
                 }
 
                 if (lua.IsCEObject(-1))
@@ -162,15 +162,15 @@ namespace CESDK
                     }
                     catch (Exception ex)
                     {
-                        throw new System.ApplicationException($"FoundList Initialize failed: {ex.Message}", ex);
+                        throw new InvalidOperationException($"FoundList Initialize failed: {ex.Message}", ex);
                     }
                 }
                 else
-                    throw new System.ApplicationException($"createFoundList returned unexpected type: {lua.Type(-1)}");
+                    throw new InvalidOperationException($"createFoundList returned unexpected type: {lua.Type(-1)}");
             }
             catch (Exception ex)
             {
-                throw new System.ApplicationException($"FoundList constructor failed: {ex.Message}", ex);
+                throw new InvalidOperationException($"FoundList constructor failed: {ex.Message}", ex);
             }
             finally
             {

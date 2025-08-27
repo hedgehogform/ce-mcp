@@ -51,7 +51,7 @@ namespace CESDK
                 }
                 catch (Exception ex)
                 {
-                    throw new System.ApplicationException($"Failed to get FoundList: {ex.Message}", ex);
+                    throw new InvalidOperationException($"Failed to get FoundList: {ex.Message}", ex);
                 }
                 
                 try
@@ -60,7 +60,7 @@ namespace CESDK
                 }
                 catch (Exception ex)
                 {
-                    throw new System.ApplicationException($"Failed to get FoundList Count: {ex.Message}", ex);
+                    throw new InvalidOperationException($"Failed to get FoundList Count: {ex.Message}", ex);
                 }
 
                 

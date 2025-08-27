@@ -30,7 +30,7 @@ namespace CESDK
                     lua.PCall(0, 0);
                 }
                 else
-                    throw new System.ApplicationException("Object without a destroy method");
+                    throw new InvalidOperationException("Object without a destroy method");
             }
         }
     }

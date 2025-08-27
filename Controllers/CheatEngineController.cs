@@ -93,6 +93,34 @@ namespace CeMCP.Controllers
             return tools.ResetScan();
         }
 
+        [HttpPost]
+        [Route("get-address-safe")]
+        public GetAddressSafeResponse GetAddressSafe([FromBody] GetAddressSafeRequest request)
+        {
+            return tools.GetAddressSafe(request);
+        }
+
+        [HttpPost]
+        [Route("get-name-from-address")]
+        public GetNameFromAddressResponse GetNameFromAddress([FromBody] GetNameFromAddressRequest request)
+        {
+            return tools.GetNameFromAddress(request);
+        }
+
+        [HttpPost]
+        [Route("in-module")]
+        public InModuleResponse InModule([FromBody] InModuleRequest request)
+        {
+            return tools.InModule(request);
+        }
+
+        [HttpPost]
+        [Route("in-system-module")]
+        public InSystemModuleResponse InSystemModule([FromBody] InSystemModuleRequest request)
+        {
+            return tools.InSystemModule(request);
+        }
+
         [HttpGet]
         [Route("health")]
         public IHttpActionResult GetHealth()

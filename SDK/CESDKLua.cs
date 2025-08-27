@@ -370,7 +370,7 @@ namespace CESDK
         {
             int pcr = lua_pcallk(L, nargs, nresults, 0, IntPtr.Zero, IntPtr.Zero);
             if (pcr != 0)
-                throw new System.ApplicationException("PCall failed with error " + pcr.ToString() + " (" + ToString(-1) + ")");
+                throw new InvalidOperationException("PCall failed with error " + pcr.ToString() + " (" + ToString(-1) + ")");
 
             return pcr;
         }
@@ -452,7 +452,7 @@ namespace CESDK
         // Add helper to CESDKLua
         public LuaTable ToTable(int idx)
         {
-            if (!IsTable(idx)) throw new ApplicationException("Stack item is not a table");
+            if (!IsTable(idx)) throw new ArgumentException("Stack item is not a table", nameof(idx));
             return new LuaTable(this, idx);
         }
 

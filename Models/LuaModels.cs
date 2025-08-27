@@ -210,4 +210,48 @@ namespace CeMCP.Models
     {
         public ResultList Results { get; set; } = new ResultList();
     }
+
+    public class GetAddressSafeRequest
+    {
+        public string AddressString { get; set; }
+        public bool? Local { get; set; }
+    }
+
+    public class GetAddressSafeResponse : BaseResponse
+    {
+        public string Address { get; set; }
+    }
+
+    public class GetNameFromAddressRequest
+    {
+        public string Address { get; set; }
+        public bool? ModuleNames { get; set; }
+        public bool? Symbols { get; set; }
+        public bool? Sections { get; set; }
+    }
+
+    public class GetNameFromAddressResponse : BaseResponse
+    {
+        public string Name { get; set; }
+    }
+
+    public class InModuleRequest
+    {
+        public string Address { get; set; }
+    }
+
+    public class InModuleResponse : BaseResponse
+    {
+        public bool InModule { get; set; }
+    }
+
+    public class InSystemModuleRequest
+    {
+        public string Address { get; set; }
+    }
+
+    public class InSystemModuleResponse : BaseResponse
+    {
+        public bool InSystemModule { get; set; }
+    }
 }

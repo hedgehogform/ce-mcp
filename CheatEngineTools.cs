@@ -15,6 +15,7 @@ namespace CeMCP
         private readonly AobScanTool _aobScanTool = new AobScanTool();
         private readonly DisassembleTool _disassembleTool = new DisassembleTool();
         private static readonly MemScanTool _memScanTool = new MemScanTool();
+        private readonly AddressTool _addressTool = new AddressTool();
 
         public LuaResponse ExecuteLua(LuaRequest request)
         {
@@ -74,6 +75,26 @@ namespace CeMCP
         public MemScanResponse ResetScan()
         {
             return _memScanTool.ResetScan();
+        }
+
+        public GetAddressSafeResponse GetAddressSafe(GetAddressSafeRequest request)
+        {
+            return _addressTool.GetAddressSafe(request);
+        }
+
+        public GetNameFromAddressResponse GetNameFromAddress(GetNameFromAddressRequest request)
+        {
+            return _addressTool.GetNameFromAddress(request);
+        }
+
+        public InModuleResponse InModule(InModuleRequest request)
+        {
+            return _addressTool.InModule(request);
+        }
+
+        public InSystemModuleResponse InSystemModule(InSystemModuleRequest request)
+        {
+            return _addressTool.InSystemModule(request);
         }
     }
 }
