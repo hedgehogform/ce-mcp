@@ -6,16 +6,16 @@ namespace CeMCP
 {
     public class CheatEngineTools
     {
-        private readonly LuaExecutionTool _luaExecutionTool = new LuaExecutionTool();
-        private readonly ProcessTool _processTool = new ProcessTool();
-        private readonly ThreadListTool _threadListTool = new ThreadListTool();
-        private readonly MemoryReadTool _memoryReadTool = new MemoryReadTool();
-        private readonly MemoryWriteTool _memoryWriteTool = new MemoryWriteTool();
-        private readonly ConversionTool _conversionTool = new ConversionTool();
-        private readonly AobScanTool _aobScanTool = new AobScanTool();
-        private readonly DisassembleTool _disassembleTool = new DisassembleTool();
-        private static readonly MemScanTool _memScanTool = new MemScanTool();
-        private readonly AddressTool _addressTool = new AddressTool();
+        private readonly LuaExecutionTool _luaExecutionTool = new();
+        private readonly ProcessTool _processTool = new();
+        private readonly ThreadListTool _threadListTool = new();
+        private readonly MemoryReadTool _memoryReadTool = new();
+        private readonly MemoryWriteTool _memoryWriteTool = new();
+        private readonly ConversionTool _conversionTool = new();
+        private readonly AobScanTool _aobScanTool = new();
+        private readonly DisassembleTool _disassembleTool = new();
+        private readonly MemScanTool _memScanTool = new();
+        private readonly AddressTool _addressTool = new();
 
         public LuaResponse ExecuteLua(LuaRequest request)
         {

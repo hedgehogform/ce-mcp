@@ -1,5 +1,5 @@
 using System;
-using CESDK;
+using CESDK.Classes;
 using CeMCP.Models;
 
 namespace CeMCP.Tools
@@ -30,7 +30,16 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var memoryRead = new MemoryRead();
+                if (!ulong.TryParse(request.Address.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
+                {
+                    return new MemoryReadResponse
+                    {
+                        Value = null,
+                        Success = false,
+                        Error = "Invalid address format"
+                    };
+                }
+
                 object value;
 
                 switch (request.DataType.ToLower())
@@ -45,23 +54,23 @@ namespace CeMCP.Tools
                                 Error = "ByteCount parameter is required for bytes and must be greater than 0"
                             };
                         }
-                        value = memoryRead.ReadBytes(request.Address, request.ByteCount.Value, request.ReturnAsTable ?? true);
+                        value = MemoryAccess.ReadBytes(address, request.ByteCount.Value);
                         break;
 
                     case "integer":
                     case "int32":
                     case "int":
-                        value = memoryRead.ReadInteger(request.Address, request.Signed ?? false);
+                        value = MemoryAccess.ReadInteger(address);
                         break;
 
                     case "qword":
                     case "int64":
                     case "long":
-                        value = memoryRead.ReadQword(request.Address);
+                        value = MemoryAccess.ReadQword(address);
                         break;
 
                     case "float":
-                        value = memoryRead.ReadFloat(request.Address);
+                        value = MemoryAccess.ReadFloat(address);
                         break;
 
                     case "string":
@@ -74,7 +83,7 @@ namespace CeMCP.Tools
                                 Error = "MaxLength parameter is required for string and must be greater than 0"
                             };
                         }
-                        value = memoryRead.ReadString(request.Address, request.MaxLength.Value, request.WideChar ?? false);
+                        value = MemoryAccess.ReadString(address, request.MaxLength.Value, request.WideChar ?? false);
                         break;
 
                     default:

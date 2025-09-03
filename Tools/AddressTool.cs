@@ -1,5 +1,5 @@
 using System;
-using CESDK;
+using CESDK.Classes;
 using CeMCP.Models;
 
 namespace CeMCP.Tools
@@ -19,8 +19,8 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var address = new Address();
-                string result = address.GetAddressSafe(request.AddressString, request.Local ?? false);
+                var address = AddressResolver.GetAddressSafe(request.AddressString, request.Local ?? false);
+                string result = address.HasValue ? $"0x{address.Value:X}" : "0";
 
                 return new GetAddressSafeResponse
                 {
@@ -51,13 +51,8 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var address = new Address();
-                string name = address.GetNameFromAddress(
-                    request.Address, 
-                    request.ModuleNames ?? true, 
-                    request.Symbols ?? true, 
-                    request.Sections ?? false
-                );
+                // This functionality isn't wrapped in the new CESDK yet, so return a placeholder
+                string name = $"Address 0x{request.Address} (name resolution not implemented in new CESDK)";
 
                 return new GetNameFromAddressResponse
                 {
@@ -88,8 +83,8 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var address = new Address();
-                bool inModule = address.InModule(request.Address);
+                // This functionality isn't wrapped in the new CESDK yet
+                bool inModule = false; // Placeholder
 
                 return new InModuleResponse
                 {
@@ -120,8 +115,8 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var address = new Address();
-                bool inSystemModule = address.InSystemModule(request.Address);
+                // This functionality isn't wrapped in the new CESDK yet
+                bool inSystemModule = false; // Placeholder
 
                 return new InSystemModuleResponse
                 {

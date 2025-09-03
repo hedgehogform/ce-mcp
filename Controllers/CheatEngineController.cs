@@ -6,7 +6,7 @@ namespace CeMCP.Controllers
     [RoutePrefix("api/cheatengine")]
     public class CheatEngineController : ApiController
     {
-        private readonly CheatEngineTools tools = new CheatEngineTools();
+        private readonly CheatEngineTools tools = new();
 
 
         [HttpPost]

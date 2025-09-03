@@ -1,5 +1,5 @@
 using System;
-using CESDK;
+using CESDK.Classes;
 using CeMCP.Models;
 using System.Linq;
 
@@ -16,19 +16,28 @@ namespace CeMCP.Tools
                 if (!validation.Success)
                     return validation;
 
-                var memoryWrite = new MemoryWrite();
+                if (!ulong.TryParse(request.Address.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
+                {
+                    return new MemoryWriteResponse
+                    {
+                        Value = null,
+                        Success = false,
+                        Error = "Invalid address format"
+                    };
+                }
+
                 object value;
                 string dataType = request.DataType.ToLower();
                 if (dataType == "bytes")
-                    value = WriteBytes(memoryWrite, request);
+                    value = WriteBytes(address, request);
                 else if (dataType == "integer" || dataType == "int32" || dataType == "int")
-                    value = WriteInteger(memoryWrite, request);
+                    value = WriteInteger(address, request);
                 else if (dataType == "qword" || dataType == "int64" || dataType == "long")
-                    value = WriteQword(memoryWrite, request);
+                    value = WriteQword(address, request);
                 else if (dataType == "float")
-                    value = WriteFloat(memoryWrite, request);
+                    value = WriteFloat(address, request);
                 else if (dataType == "string")
-                    value = WriteString(memoryWrite, request);
+                    value = WriteString(address, request);
                 else
                     value = null;
 
@@ -72,20 +81,34 @@ namespace CeMCP.Tools
         }
 
         private MemoryWriteResponse Error(string message) =>
-            new MemoryWriteResponse
+            new()
             { Value = null, Success = false, Error = message };
 
-        private static object WriteBytes(MemoryWrite memoryWrite, MemoryWriteRequest request)
+        private static object WriteBytes(ulong address, MemoryWriteRequest request)
         {
-            if (request.ByteCount == null || request.ByteCount.Value <= 0)
-                throw new ArgumentException("ByteCount parameter is required for bytes and must be greater than 0");
+            if (request.Value == null)
+                throw new ArgumentException("Value is required for bytes write");
 
-            int[] bytes = new int[request.ByteCount.Value];
-            memoryWrite.WriteBytes(request.Address, bytes);
+            // Parse byte array from various formats
+            byte[] bytes;
+            if (request.Value is byte[] byteArray)
+            {
+                bytes = byteArray;
+            }
+            else if (request.Value is int[] intArray)
+            {
+                bytes = intArray.Select(i => (byte)i).ToArray();
+            }
+            else
+            {
+                throw new ArgumentException("Value must be a byte array or int array for bytes write");
+            }
+
+            MemoryAccess.WriteBytes(address, bytes);
             return bytes;
         }
 
-        private static object WriteInteger(MemoryWrite memoryWrite, MemoryWriteRequest request)
+        private static object WriteInteger(ulong address, MemoryWriteRequest request)
         {
             if (request.Value == null)
                 throw new ArgumentException("Value is required for integer write");
@@ -93,11 +116,11 @@ namespace CeMCP.Tools
             if (!int.TryParse(request.Value.ToString(), out int intValue))
                 throw new ArgumentException("Value must be a valid integer");
 
-            memoryWrite.WriteInteger(request.Address, intValue);
+            MemoryAccess.WriteInteger(address, intValue);
             return intValue;
         }
 
-        private static object WriteQword(MemoryWrite memoryWrite, MemoryWriteRequest request)
+        private static object WriteQword(ulong address, MemoryWriteRequest request)
         {
             if (request.Value == null)
                 throw new ArgumentException("Value is required for qword write");
@@ -105,11 +128,11 @@ namespace CeMCP.Tools
             if (!long.TryParse(request.Value.ToString(), out long longValue))
                 throw new ArgumentException("Value must be a valid long");
 
-            memoryWrite.WriteQword(request.Address, longValue);
+            MemoryAccess.WriteQword(address, longValue);
             return longValue;
         }
 
-        private static object WriteFloat(MemoryWrite memoryWrite, MemoryWriteRequest request)
+        private static object WriteFloat(ulong address, MemoryWriteRequest request)
         {
             if (request.Value == null)
                 throw new ArgumentException("Value is required for float write");
@@ -117,18 +140,18 @@ namespace CeMCP.Tools
             if (!float.TryParse(request.Value.ToString(), out float floatValue))
                 throw new ArgumentException("Value must be a valid float");
 
-            memoryWrite.WriteFloat(request.Address, floatValue);
+            MemoryAccess.WriteFloat(address, floatValue);
             return floatValue;
         }
 
-        private static object WriteString(MemoryWrite memoryWrite, MemoryWriteRequest request)
+        private static object WriteString(ulong address, MemoryWriteRequest request)
         {
             string text = request.Value?.ToString() ?? throw new ArgumentException("String value is required");
 
             if (request.MaxLength.HasValue && text.Length > request.MaxLength.Value)
                 text = text.Substring(0, request.MaxLength.Value);
 
-            memoryWrite.WriteString(request.Address, text, request.WideChar ?? false);
+            MemoryAccess.WriteString(address, text, request.WideChar ?? false);
             return text;
         }
     }

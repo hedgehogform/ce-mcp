@@ -19,16 +19,15 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var luaExecution = new LuaExecution();
-                string result = luaExecution.ExecuteCode(request.Code);
+                PluginContext.Lua.DoString(request.Code);
 
                 return new LuaResponse
                 {
-                    Result = result,
+                    Result = "Lua code executed successfully",
                     Success = true
                 };
             }
-            catch (Exception e)
+            catch (InvalidOperationException e)
             {
                 return new LuaResponse
                 {

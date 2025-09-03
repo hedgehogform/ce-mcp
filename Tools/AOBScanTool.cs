@@ -1,5 +1,6 @@
 using System;
-using CESDK;
+using System.Linq;
+using CESDK.Classes;
 using CeMCP.Models;
 
 namespace CeMCP.Tools
@@ -19,22 +20,16 @@ namespace CeMCP.Tools
                     };
                 }
 
-                // Use the AOB SDK wrapper instead of raw Lua
-                var aob = new AOB();
-                var addresses = aob.Scan(
-                    request.AOBString,
-                    request.ProtectionFlags,
-                    request.AlignmentType,
-                    request.AlignmentParam
-                );
+                // Perform the AOB scan
+                var result = AOBScanner.Scan(request.AOBString);
 
                 return new AobScanResponse
                 {
                     Success = true,
-                    Addresses = addresses.ToArray()
+                    Addresses = [.. result.Select(addr => $"0x{addr:X}")]
                 };
             }
-            catch (Exception ex)
+            catch (AOBScanException ex)
             {
                 return new AobScanResponse
                 {

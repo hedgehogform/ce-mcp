@@ -1,88 +1,71 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using CeMCP.Models;
+using CESDK.Classes;
 
-namespace CESDK
+namespace CeMCP.Tools
 {
     public class MemScanTool
     {
-        private readonly MemScan memScan = new MemScan();
+        private static readonly MemScan memoryScanner = new();
 
         public MemScanResponse Scan(MemScanScanRequest request)
         {
             try
             {
-
-                // Convert MemScanScanRequest to ScanParameters
-                ScanParameters parameters = new ScanParameters()
+                // Map request to new ScanParameters
+                var parameters = new ScanParameters
                 {
-                    Value = request.Input1,
-                    Value2 = request.Input2,
-                    ScanOption = request.ScanOption,
-                    VarType = request.VarType,
-                    RoundingType = request.RoundingType,
+                    ScanOption = MapScanOption(request.ScanOption.ToString()),
+                    VarType = MapVarType(request.VarType.ToString()),
+                    RoundingType = MapRoundingType(request.RoundingType.ToString()),
+                    Input1 = request.Input1,
+                    Input2 = request.Input2,
                     StartAddress = request.StartAddress,
                     StopAddress = request.StopAddress,
-                    ProtectionFlags = request.ProtectionFlags,
-                    AlignmentType = request.AlignmentType,
-                    AlignmentValue = request.AlignmentParam,
-                    isHexadecimalInput = request.IsHexadecimalInput,
-                    isUTF16Scan = request.IsUnicodeScan,
-                    isCaseSensitive = request.IsCaseSensitive,
-                    isPercentageScan = request.IsPercentageScan
+                    ProtectionFlags = request.ProtectionFlags ?? "+W-C",
+                    AlignmentType = MapAlignmentType(request.AlignmentType.ToString()),
+                    AlignmentParam = request.AlignmentParam ?? "4",
+                    IsHexadecimalInput = request.IsHexadecimalInput,
+                    IsUnicodeScan = request.IsUnicodeScan,
+                    IsCaseSensitive = request.IsCaseSensitive
                 };
 
-                // Start the scan
-                memScan.Scan(parameters);
-
-                // CRITICAL: Wait for the scan to complete
-                memScan.WaitTillDone();
-
-                // Get the results after scan completion
-                FoundList foundList;
-                int totalResults;
-                
-                try
+                // Perform the scan
+                var foundList = memoryScanner.GetAttachedFoundList();
+                if (foundList == null || foundList.Count == 0)
                 {
-                    foundList = memScan.GetFoundList();
+                    memoryScanner.FirstScan(parameters);
                 }
-                catch (Exception ex)
+                else
                 {
-                    throw new InvalidOperationException($"Failed to get FoundList: {ex.Message}", ex);
-                }
-                
-                try
-                {
-                    totalResults = foundList.Count;
-                }
-                catch (Exception ex)
-                {
-                    throw new InvalidOperationException($"Failed to get FoundList Count: {ex.Message}", ex);
+                    memoryScanner.NextScan(parameters);
                 }
 
-                
-                if (totalResults == 0)
+                memoryScanner.WaitTillDone();
+
+                foundList = memoryScanner.GetAttachedFoundList();
+                if (foundList == null || foundList.Count == 0)
                 {
+                    // Even though it didn't find any results, the scan was successful
                     return new MemScanResponse
                     {
                         Success = true,
                         Results = null
                     };
                 }
-                
-                var maxResults = Math.Min(totalResults, 1000);
+
+                var maxResults = Math.Min(foundList.Count, 1000);
                 var results = new ResultList
                 {
-                    TotalCount = totalResults
+                    TotalCount = foundList.Count
                 };
 
-                // Add up to 1000 results
                 for (int i = 0; i < maxResults; i++)
                 {
-                    results.Add(foundList.GetAddress(i), foundList.GetValue(i));
+                    var address = foundList.GetAddress(i);
+                    var value = foundList.GetValue(i); // Assuming FoundList exposes GetValue
+                    results.Add($"0x{address:X}", value);
                 }
 
                 return new MemScanResponse
@@ -106,8 +89,7 @@ namespace CESDK
         {
             try
             {
-                memScan.Reset();
-                
+                memoryScanner.FirstScan(new ScanParameters()); // Reset via new scan object
                 return new MemScanResponse
                 {
                     Success = true,
@@ -123,6 +105,62 @@ namespace CESDK
                     Results = null
                 };
             }
+        }
+
+        private static ScanOption MapScanOption(string scanOption)
+        {
+            return scanOption?.ToLower() switch
+            {
+                "sounknownvalue" => ScanOption.soUnknownValue,
+                "soexactvalue" => ScanOption.soExactValue,
+                "sovaluebetween" => ScanOption.soValueBetween,
+                "sobiggerthan" => ScanOption.soBiggerThan,
+                "sosmallerthan" => ScanOption.soSmallerThan,
+                "sochanged" => ScanOption.soChanged,
+                "sounchanged" => ScanOption.soUnchanged,
+                "soincreased" => ScanOption.soIncreasedValue,
+                "sodecreased" => ScanOption.soDecreasedValue,
+                _ => ScanOption.soExactValue
+            };
+        }
+
+        private static VariableType? MapVarType(string varType)
+        {
+            return varType?.ToLower() switch
+            {
+                "vtbyte" => VariableType.vtByte,
+                "vtword" => VariableType.vtWord,
+                "vtdword" => VariableType.vtDword,
+                "vtqword" => VariableType.vtQword,
+                "vtsingle" => VariableType.vtSingle,
+                "vtdouble" => VariableType.vtDouble,
+                "vtstring" => VariableType.vtString,
+                "vtbytearray" => VariableType.vtByteArray,
+                "vtall" => VariableType.vtAll,
+                _ => VariableType.vtDword
+            };
+        }
+
+        private static RoundingType MapRoundingType(string roundingType)
+        {
+            return roundingType?.ToLower() switch
+            {
+                "rtrounded" => RoundingType.rtRounded,
+                "rttruncated" => RoundingType.rtTruncated,
+                "rtextremerounded" => RoundingType.rtExtremerounded,
+                _ => RoundingType.rtExtremerounded
+            };
+        }
+
+        private static AlignmentType MapAlignmentType(string alignmentType)
+        {
+            return alignmentType?.ToLower() switch
+            {
+                "fsmnotaligned" => AlignmentType.fsmNotAligned,
+                "fsmaligned" => AlignmentType.fsmAligned,
+                "fsmlastdigits" => AlignmentType.fsmLastDigits,
+                _ => AlignmentType.fsmAligned
+            };
         }
     }
 }

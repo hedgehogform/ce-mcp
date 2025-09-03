@@ -1,5 +1,6 @@
 using System;
 using CESDK;
+using CESDK.Classes;
 using CeMCP.Models;
 
 namespace CeMCP.Tools
@@ -39,8 +40,13 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var converter = new StringConverter();
-                string output = converter.ConvertString(request.Input, request.ConversionType);
+                string output = request.ConversionType.ToLower() switch
+                {
+                    "md5" => Converter.StringToMD5(request.Input),
+                    "ansitoutf8" => Converter.AnsiToUtf8(request.Input),
+                    "utf8toansi" => Converter.Utf8ToAnsi(request.Input),
+                    _ => throw new NotSupportedException($"Conversion type {request.ConversionType} not supported")
+                };
 
                 return new ConversionResponse
                 {
@@ -48,7 +54,7 @@ namespace CeMCP.Tools
                     Output = output
                 };
             }
-            catch (Exception ex)
+            catch (ConverterException ex)
             {
                 return new ConversionResponse
                 {

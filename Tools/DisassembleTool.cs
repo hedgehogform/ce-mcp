@@ -1,5 +1,5 @@
 using System;
-using CESDK;
+using CESDK.Classes;
 using CeMCP.Models;
 
 namespace CeMCP.Tools
@@ -19,20 +19,29 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var disassembler = new Disassembler();
+                if (!ulong.TryParse(request.Address.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
+                {
+                    return new DisassemblerResponse
+                    {
+                        Success = false,
+                        Error = "Invalid address format"
+                    };
+                }
+
                 string result;
 
                 switch (request.RequestType?.ToLower())
                 {
                     case "get-instruction-size":
-                        int size = disassembler.GetInstructionSize(request.Address);
+                        var size = Disassembler.GetInstructionSize(address);
                         result = size.ToString();
                         break;
 
                     case "disassemble":
                     case null:
                     case "":
-                        result = disassembler.Disassemble(request.Address);
+                        var instruction = Disassembler.Disassemble(address);
+                        result = instruction.ToString();
                         break;
 
                     default:

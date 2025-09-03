@@ -4,12 +4,14 @@ using CESDK;
 
 namespace CeMCP.Models
 {
+    // Base response class
     public class BaseResponse
     {
         public bool Success { get; set; }
         public string Error { get; set; }
     }
 
+    // Lua request/response
     public class LuaRequest
     {
         public string Code { get; set; }
@@ -20,6 +22,7 @@ namespace CeMCP.Models
         public string Result { get; set; }
     }
 
+    // Process info classes
     public class ProcessInfo
     {
         public int ProcessId { get; set; }
@@ -48,6 +51,7 @@ namespace CeMCP.Models
         public string ProcessName { get; set; }
     }
 
+    // Memory read/write
     public class MemoryReadRequest
     {
         public string Address { get; set; }
@@ -66,38 +70,26 @@ namespace CeMCP.Models
 
     public class ByteCount
     {
-        // Represents the number of bytes to write
         public int Value { get; set; }
     }
 
     public class MemoryWriteRequest
     {
-        // Memory address to write to
         public string Address { get; set; }
-
-        // Value to write (can be int, long, float, string, etc.)
         public object Value { get; set; }
-
-        // Data type to write ("bytes", "integer", "float", "string", etc.)
         public string DataType { get; set; }
-
-        // Only used when writing bytes
         public ByteCount ByteCount { get; set; }
-
-        // Only used when writing strings
         public int? MaxLength { get; set; }
         public bool? WideChar { get; set; }
-
-        // Optional for integer writes
         public bool? Signed { get; set; }
     }
-
 
     public class MemoryWriteResponse : BaseResponse
     {
         public object Value { get; set; }
     }
 
+    // Conversion
     public class ConversionRequest
     {
         public string Input { get; set; }
@@ -109,6 +101,7 @@ namespace CeMCP.Models
         public string Output { get; set; }
     }
 
+    // AOB scan
     public class AobScanRequest
     {
         public string AOBString { get; set; }
@@ -122,6 +115,7 @@ namespace CeMCP.Models
         public string[] Addresses { get; set; }
     }
 
+    // Disassembler
     public class DisassemblerRequest
     {
         public string RequestType { get; set; } // disassemble, get-instruction-size
@@ -138,23 +132,52 @@ namespace CeMCP.Models
         public int Size { get; set; }
     }
 
+    // Missing enums (define here for SDK usage without DLL)
+    public enum ScanOptions
+    {
+        soExactValue,
+        soBetween
+    }
+
+    public enum VarTypes
+    {
+        vtDword,
+        vtQword,
+        vtFloat,
+        vtDouble
+    }
+
+    public enum RoundingTypes
+    {
+        rtExtremerounded,
+        rtTruncated,
+        rtNearest
+    }
+
+    public enum FastScanMethods
+    {
+        fsmAligned,
+        fsmUnaligned
+    }
+
+    // MemScan
     public class MemScanScanRequest
     {
         public ScanOptions ScanOption { get; set; } = ScanOptions.soExactValue;
         public VarTypes VarType { get; set; } = VarTypes.vtDword;
         public RoundingTypes RoundingType { get; set; } = RoundingTypes.rtExtremerounded;
-        public string Input1 { get; set; } = string.Empty; // Primary search value
-        public string Input2 { get; set; } = string.Empty; // Secondary search value (for between scans)
-        public ulong StartAddress { get; set; } = 0; // Default start
-        public ulong StopAddress { get; set; } = ulong.MaxValue; // Default stop
-        public string ProtectionFlags { get; set; } = "+W-C"; // e.g., "+W+X"
+        public string Input1 { get; set; } = string.Empty;
+        public string Input2 { get; set; } = string.Empty;
+        public ulong StartAddress { get; set; } = 0;
+        public ulong StopAddress { get; set; } = ulong.MaxValue;
+        public string ProtectionFlags { get; set; } = "+W-C";
         public FastScanMethods AlignmentType { get; set; } = FastScanMethods.fsmAligned;
-        public string AlignmentParam { get; set; } = "4"; // Alignment parameter
+        public string AlignmentParam { get; set; } = "4";
         public bool IsHexadecimalInput { get; set; } = false;
         public bool IsNotABinaryString { get; set; } = false;
         public bool IsUnicodeScan { get; set; } = false;
         public bool IsCaseSensitive { get; set; } = false;
-        public bool IsPercentageScan { get; set; } = false; // next scan
+        public bool IsPercentageScan { get; set; } = false;
     }
 
     public class ResultItem
@@ -174,19 +197,8 @@ namespace CeMCP.Models
         private readonly List<ResultItem> _items = new List<ResultItem>();
         private const int MaxStored = 1000;
 
-        /// <summary>
-        /// Total number of results (set this manually).
-        /// </summary>
         public int TotalCount { get; set; }
-
-        /// <summary>
-        /// Number of results actually stored (capped at MaxStored).
-        /// </summary>
         public int StoredCount => _items.Count;
-
-        /// <summary>
-        /// The actual results (addresses and values).
-        /// </summary>
         public List<ResultItem> Items => _items;
 
         public string this[int index] => _items[index].Address;
@@ -203,14 +215,12 @@ namespace CeMCP.Models
         }
     }
 
-
-
-
     public class MemScanResponse : BaseResponse
     {
         public ResultList Results { get; set; } = new ResultList();
     }
 
+    // Safe address requests
     public class GetAddressSafeRequest
     {
         public string AddressString { get; set; }
@@ -222,6 +232,7 @@ namespace CeMCP.Models
         public string Address { get; set; }
     }
 
+    // Name from address
     public class GetNameFromAddressRequest
     {
         public string Address { get; set; }
@@ -235,6 +246,7 @@ namespace CeMCP.Models
         public string Name { get; set; }
     }
 
+    // In module checks
     public class InModuleRequest
     {
         public string Address { get; set; }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CeMCP
 {
-    public class McpPlugin : CESDKPluginClass
+    public class McpPlugin : CheatEnginePlugin
     {
         private bool isServerRunning = false;
         private McpServer mcpServer;
@@ -15,19 +15,24 @@ namespace CeMCP
 
         public bool IsServerRunning => isServerRunning;
 
-        public override string GetPluginName()
+
+
+        public override string Name
         {
-            var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
-            return $"MCP Server for Cheat Engine v{version}";
+            get
+            {
+                var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+                return $"MCP Server for Cheat Engine v{version}";
+            }
         }
 
-        public override bool EnablePlugin()
+        protected override void OnEnable()
         {
-            sdk.lua.Register("toggle_mcp_server", ToggleMCPServer);
-            sdk.lua.Register("update_button_text", UpdateButtonText);
-            sdk.lua.Register("show_mcp_config", ShowMCPConfig);
+            PluginContext.Lua.RegisterFunction("toggle_mcp_server", ToggleMCPServer);
+            PluginContext.Lua.RegisterFunction("update_button_text", UpdateButtonText);
+            PluginContext.Lua.RegisterFunction("show_mcp_config", ShowMCPConfig);
 
-            sdk.lua.DoString(@"
+            PluginContext.Lua.DoString(@"
                 local m=MainForm.Menu
                 topm=createMenuItem(m)
                 topm.Caption='MCP'
@@ -47,16 +52,14 @@ namespace CeMCP
                 end
                 topm.add(mcpConfigMenuItem)
             ");
-
-            return true;
         }
 
-        public override bool DisablePlugin()
+        protected override void OnDisable()
         {
             StopMCPServer();
-            
+
             // Remove menu items
-            sdk.lua.DoString(@"
+            PluginContext.Lua.DoString(@"
                 if mcpToggleMenuItem then
                     mcpToggleMenuItem.destroy()
                     mcpToggleMenuItem = nil
@@ -70,27 +73,23 @@ namespace CeMCP
                     topm = nil
                 end
             ");
-            
-            return true;
         }
 
-        int ToggleMCPServer()
+        void ToggleMCPServer()
         {
             if (isServerRunning)
                 StopMCPServer();
             else
                 StartMCPServer();
-            return 1;
         }
 
-        int UpdateButtonText()
+        void UpdateButtonText()
         {
             string buttonText = isServerRunning ? "Stop MCP Server" : "Start MCP Server";
-            sdk.lua.DoString($"mcpToggleMenuItem.Caption='{buttonText}'");
-            return 1;
+            PluginContext.Lua.DoString($"mcpToggleMenuItem.Caption='{buttonText}'");
         }
 
-        int ShowMCPConfig()
+        void ShowMCPConfig()
         {
             try
             {
@@ -106,7 +105,7 @@ namespace CeMCP
                         configWindow.Topmost = false;
                         configWindow.Focus();
                     }));
-                    return 1;
+                    return;
                 }
 
                 // Start window in a new STA thread
@@ -128,20 +127,17 @@ namespace CeMCP
                     }
                     catch (Exception ex)
                     {
-                        sdk.lua.DoString($"print('Error in config window thread: {ex.Message}')");
+                        PluginContext.Lua.DoString($"print('Error in config window thread: {ex.Message}')");
                         configWindow = null;
                     }
                 });
 
                 configThread.SetApartmentState(ApartmentState.STA);
                 configThread.Start();
-
-                return 1;
             }
             catch (Exception ex)
             {
-                sdk.lua.DoString($"print('Error opening configuration: {ex.Message}')");
-                return 0;
+                PluginContext.Lua.DoString($"print('Error opening configuration: {ex.Message}')");
             }
         }
 
@@ -179,7 +175,7 @@ namespace CeMCP
             mcpServer.Start(ServerConfig.ConfigBaseUrl);
 
             isServerRunning = true;
-            sdk.lua.DoString($"print('MCP API Started on: {ServerConfig.ConfigBaseUrl}')");
+            PluginContext.Lua.DoString($"print('MCP API Started on: {ServerConfig.ConfigBaseUrl}')");
             UpdateButtonText();
         }
 
@@ -190,7 +186,7 @@ namespace CeMCP
             mcpServer?.Stop();
             mcpServer = null;
             isServerRunning = false;
-            sdk.lua.DoString("print('MCP API stopped')");
+            PluginContext.Lua.DoString("print('MCP API stopped')");
             UpdateButtonText();
         }
     }
