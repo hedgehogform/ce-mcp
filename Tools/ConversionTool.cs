@@ -29,7 +29,7 @@ namespace CeMCP.Tools
                     };
                 }
 
-                string luaFunction = GetLuaFunction(request.ConversionType);
+                string luaFunction = GetLuaFunction(request.ConversionType!);
 
                 if (string.IsNullOrEmpty(luaFunction))
                 {
@@ -40,11 +40,11 @@ namespace CeMCP.Tools
                     };
                 }
 
-                string output = request.ConversionType.ToLower() switch
+                string output = request.ConversionType?.ToLower() switch
                 {
-                    "md5" => Converter.StringToMD5(request.Input),
-                    "ansitoutf8" => Converter.AnsiToUtf8(request.Input),
-                    "utf8toansi" => Converter.Utf8ToAnsi(request.Input),
+                    "md5" => Converter.StringToMD5(request.Input!),
+                    "ansitoutf8" => Converter.AnsiToUtf8(request.Input!),
+                    "utf8toansi" => Converter.Utf8ToAnsi(request.Input!),
                     _ => throw new NotSupportedException($"Conversion type {request.ConversionType} not supported")
                 };
 
@@ -74,7 +74,7 @@ namespace CeMCP.Tools
             else if (lowerType == "md5")
                 return "stringToMD5String";
             else
-                return null;
+                return null!;
         }
     }
 }

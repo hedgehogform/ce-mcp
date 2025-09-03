@@ -19,7 +19,7 @@ namespace CeMCP.Tools
                     };
                 }
 
-                if (!ulong.TryParse(request.Address.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
+                if (!ulong.TryParse(request.Address!.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
                 {
                     return new DisassemblerResponse
                     {
@@ -41,7 +41,7 @@ namespace CeMCP.Tools
                     case null:
                     case "":
                         var instruction = Disassembler.Disassemble(address);
-                        result = instruction.ToString();
+                        result = instruction?.ToString() ?? "Failed to disassemble";
                         break;
 
                     default:

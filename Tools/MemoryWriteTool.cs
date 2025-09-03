@@ -16,7 +16,7 @@ namespace CeMCP.Tools
                 if (!validation.Success)
                     return validation;
 
-                if (!ulong.TryParse(request.Address.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
+                if (!ulong.TryParse(request.Address?.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
                 {
                     return new MemoryWriteResponse
                     {
@@ -26,8 +26,8 @@ namespace CeMCP.Tools
                     };
                 }
 
-                object value;
-                string dataType = request.DataType.ToLower();
+                object? value;
+                string dataType = request.DataType?.ToLower() ?? "";
                 if (dataType == "bytes")
                     value = WriteBytes(address, request);
                 else if (dataType == "integer" || dataType == "int32" || dataType == "int")

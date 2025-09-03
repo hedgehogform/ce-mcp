@@ -12,7 +12,7 @@ namespace CeMCP
 {
   public class McpServer : IDisposable
   {
-    private IDisposable _webApp;
+    private IDisposable? _webApp;
     private bool _disposed = false;
 
     public void Configuration(IAppBuilder appBuilder)

@@ -30,7 +30,7 @@ namespace CeMCP.Tools
                     };
                 }
 
-                if (!ulong.TryParse(request.Address.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
+                if (!ulong.TryParse(request.Address?.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
                 {
                     return new MemoryReadResponse
                     {
@@ -42,7 +42,7 @@ namespace CeMCP.Tools
 
                 object value;
 
-                switch (request.DataType.ToLower())
+                switch (request.DataType?.ToLower())
                 {
                     case "bytes":
                         if (!request.ByteCount.HasValue || request.ByteCount.Value <= 0)

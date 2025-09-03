@@ -76,9 +76,9 @@ namespace CeMCP
 
         private sealed class ConfigData
         {
-            public string Host { get; set; }
+            public string? Host { get; set; }
             public int Port { get; set; }
-            public string ServerName { get; set; }
+            public string? ServerName { get; set; }
         }
     }
 }

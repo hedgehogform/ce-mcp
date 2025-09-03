@@ -9,9 +9,9 @@ namespace CeMCP
     public class McpPlugin : CheatEnginePlugin
     {
         private bool isServerRunning = false;
-        private McpServer mcpServer;
-        private ConfigWindow configWindow = null;
-        private Thread configThread = null;
+        private McpServer? mcpServer;
+        private ConfigWindow? configWindow = null;
+        private Thread? configThread = null;
 
         public bool IsServerRunning => isServerRunning;
 
@@ -150,7 +150,7 @@ namespace CeMCP
             }
         }
 
-        public McpServer GetServerWrapper()
+        public McpServer? GetServerWrapper()
         {
             return mcpServer;
         }

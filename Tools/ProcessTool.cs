@@ -48,7 +48,7 @@ namespace CeMCP.Tools
                     };
                 }
 
-                var processValue = request.Process.Trim();
+                var processValue = request.Process!.Trim();
                 bool success;
 
                 if (int.TryParse(processValue, out int pid))

@@ -21,7 +21,7 @@ namespace CeMCP.Tools
                 }
 
                 // Perform the AOB scan
-                var result = AOBScanner.Scan(request.AOBString);
+                var result = AOBScanner.Scan(request.AOBString!);
 
                 return new AobScanResponse
                 {
