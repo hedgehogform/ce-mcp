@@ -2,6 +2,7 @@
 
 > [!WARNING]
 > This project is not feature complete and is under heavy active development.
+>
 > Things might break while features are added.
 
 A Model Context Protocol (MCP) server plugin for Cheat Engine that provides access to Cheat Engine functionality.
