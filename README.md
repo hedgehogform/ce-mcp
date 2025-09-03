@@ -1,18 +1,21 @@
 # Cheat Engine MCP Server
 
 > [!WARNING]
-> This project is not feature complete and is under active development.
+> This project is not feature complete and is under heavy active development.
+> Things might break while features are added.
 
 A Model Context Protocol (MCP) server plugin for Cheat Engine that provides access to Cheat Engine functionality.
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhedgehogform%2Fce-mcp.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fhedgehogform%2Fce-mcp?ref=badge_large&issueType=license)
 
 ## Related Projects
 
 - **Python MCP Client**: [hedgehogform/ce-mcp-client](https://github.com/hedgehogform/ce-mcp-client) - Python FastMCP server for AI integration
 
-## Current Features
+<!-- ## Current Features
 
 - Execute Lua code in Cheat Engine
-- Get list of running processes
+- Get list of running processes -->
 
 ## Requirements
 
