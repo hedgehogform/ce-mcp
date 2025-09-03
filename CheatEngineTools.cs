@@ -6,95 +6,106 @@ namespace CeMCP
 {
     public class CheatEngineTools
     {
-        private readonly LuaExecutionTool _luaExecutionTool = new();
-        private readonly ProcessTool _processTool = new();
-        private readonly ThreadListTool _threadListTool = new();
-        private readonly MemoryReadTool _memoryReadTool = new();
-        private readonly MemoryWriteTool _memoryWriteTool = new();
-        private readonly ConversionTool _conversionTool = new();
-        private readonly AobScanTool _aobScanTool = new();
-        private readonly DisassembleTool _disassembleTool = new();
-        private readonly MemScanTool _memScanTool = new();
-        private readonly AddressTool _addressTool = new();
+        private LuaExecutionTool? _luaExecutionTool;
+        private ProcessTool? _processTool;
+        private ThreadListTool? _threadListTool;
+        private MemoryReadTool? _memoryReadTool;
+        private MemoryWriteTool? _memoryWriteTool;
+        private ConversionTool? _conversionTool;
+        private AobScanTool? _aobScanTool;
+        private DisassembleTool? _disassembleTool;
+        private MemScanTool? _memScanTool;
+        private AddressTool? _addressTool;
+
+        private LuaExecutionTool LuaExecutionTool => _luaExecutionTool ??= new();
+        private ProcessTool ProcessTool => _processTool ??= new();
+        private ThreadListTool ThreadListTool => _threadListTool ??= new();
+        private MemoryReadTool MemoryReadTool => _memoryReadTool ??= new();
+        private MemoryWriteTool MemoryWriteTool => _memoryWriteTool ??= new();
+        private ConversionTool ConversionTool => _conversionTool ??= new();
+        private AobScanTool AobScanTool => _aobScanTool ??= new();
+        private DisassembleTool DisassembleTool => _disassembleTool ??= new();
+        private MemScanTool MemScanTool => _memScanTool ??= new();
+        private AddressTool AddressTool => _addressTool ??= new();
 
         public LuaResponse ExecuteLua(LuaRequest request)
         {
-            return _luaExecutionTool.ExecuteLua(request);
+            return LuaExecutionTool.ExecuteLua(request);
         }
 
         public ProcessListResponse GetProcessList()
         {
-            return _processTool.GetProcessList();
+            return ProcessTool.GetProcessList();
         }
 
         public BaseResponse OpenProcess(OpenProcessRequest request)
         {
-            return _processTool.OpenProcess(request);
+            return ProcessTool.OpenProcess(request);
         }
 
         public ThreadListResponse GetThreadList()
         {
-            return _threadListTool.GetThreadList();
+            return ThreadListTool.GetThreadList();
         }
 
         public ProcessStatusResponse GetProcessStatus()
         {
-            return _processTool.GetProcessStatus();
+            return ProcessTool.GetProcessStatus();
         }
 
         public MemoryReadResponse ReadMemory(MemoryReadRequest request)
         {
-            return _memoryReadTool.ReadMemory(request);
+            return MemoryReadTool.ReadMemory(request);
         }
 
         public BaseResponse WriteMemory(MemoryWriteRequest request)
         {
-            return _memoryWriteTool.WriteMemory(request);
+            return MemoryWriteTool.WriteMemory(request);
         }
 
         public ConversionResponse Convert(ConversionRequest request)
         {
-            return _conversionTool.Convert(request);
+            return ConversionTool.Convert(request);
         }
 
         public AobScanResponse AOBScan(AobScanRequest request)
         {
-            return _aobScanTool.AOBScan(request);
+            return AobScanTool.AOBScan(request);
         }
 
         public DisassemblerResponse Disassemble(DisassemblerRequest request)
         {
-            return _disassembleTool.Disassemble(request);
+            return DisassembleTool.Disassemble(request);
         }
 
         public MemScanResponse Scan(MemScanScanRequest request)
         {
-            return _memScanTool.Scan(request);
+            return MemScanTool.Scan(request);
         }
 
         public MemScanResponse ResetScan()
         {
-            return _memScanTool.ResetScan();
+            return MemScanTool.ResetScan();
         }
 
         public GetAddressSafeResponse GetAddressSafe(GetAddressSafeRequest request)
         {
-            return _addressTool.GetAddressSafe(request);
+            return AddressTool.GetAddressSafe(request);
         }
 
         public GetNameFromAddressResponse GetNameFromAddress(GetNameFromAddressRequest request)
         {
-            return _addressTool.GetNameFromAddress(request);
+            return AddressTool.GetNameFromAddress(request);
         }
 
         public InModuleResponse InModule(InModuleRequest request)
         {
-            return _addressTool.InModule(request);
+            return AddressTool.InModule(request);
         }
 
         public InSystemModuleResponse InSystemModule(InSystemModuleRequest request)
         {
-            return _addressTool.InSystemModule(request);
+            return AddressTool.InSystemModule(request);
         }
     }
 }

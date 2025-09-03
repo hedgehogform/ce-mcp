@@ -9,6 +9,7 @@
     <AssemblyVersion>$(Version)</AssemblyVersion>
     <FileVersion>$(Version)</FileVersion>
     <Nullable>enable</Nullable>
+    <NoWarn>CS1591</NoWarn>
   </PropertyGroup>
 
 
@@ -20,8 +21,8 @@
     <PackageReference Include="Microsoft.Owin.Hosting" Version="4.2.3" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Owin" Version="5.3.0" />
     <PackageReference Include="Microsoft.AspNet.WebApi.OwinSelfHost" Version="5.3.0" />
-    <PackageReference Include="Swashbuckle.Core" Version="5.6.0" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
+    <PackageReference Include="Swashbuckle.Core" Version="5.6.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Costura.Fody" Version="6.0.0">
