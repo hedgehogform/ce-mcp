@@ -7,7 +7,7 @@
 
 A Model Context Protocol (MCP) server plugin for Cheat Engine that provides access to Cheat Engine functionality.
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhedgehogform%2Fce-mcp.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fhedgehogform%2Fce-mcp?ref=badge_large&issueType=license)
+[![FOSSA](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fhedgehogform%2Fce-mcp.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fhedgehogform%2Fce-mcp?ref=badge_large&issueType=license)
 
 ## Related Projects
 
