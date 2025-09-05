@@ -24,7 +24,9 @@ namespace CeMCP
             _viewModel.LoadFromServerConfig();
             UpdateServerStatus();
 
-            ApplyTheme(IsWindowsInDarkMode());
+            bool isDarkMode = IsWindowsInDarkMode();
+            _viewModel.IsDarkMode = isDarkMode;
+            ApplyTheme(isDarkMode);
         }
 
         private void UpdateServerStatus()

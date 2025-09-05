@@ -28,44 +28,71 @@ namespace CeMCP.Tools
                     AlignmentParam = request.AlignmentParam ?? "4",
                     IsHexadecimalInput = request.IsHexadecimalInput,
                     IsUnicodeScan = request.IsUnicodeScan,
-                    IsCaseSensitive = request.IsCaseSensitive
+                    IsCaseSensitive = request.IsCaseSensitive,
+                    IsPercentageScan = request.IsPercentageScan
                 };
 
-                // Perform the scan
-                var foundList = memoryScanner.GetAttachedFoundList();
-                if (foundList == null || foundList.Count == 0)
+                // Determine if this is a first scan or next scan
+                var existingFoundList = memoryScanner.GetAttachedFoundList();
+                if (existingFoundList == null || existingFoundList.Count <= 0)
                 {
+                    // Perform first scan
                     memoryScanner.FirstScan(parameters);
                 }
                 else
                 {
+                    // Perform next scan
                     memoryScanner.NextScan(parameters);
                 }
 
+                // Wait for the scan to complete
                 memoryScanner.WaitTillDone();
 
-                foundList = memoryScanner.GetAttachedFoundList();
-                if (foundList == null || foundList.Count == 0)
+                // Get the attached found list after scan completion
+                var foundList = memoryScanner.GetAttachedFoundList();
+                if (foundList == null)
                 {
-                    // Even though it didn't find any results, the scan was successful
                     return new MemScanResponse
                     {
                         Success = true,
-                        Results = null
+                        Results = new ResultList { TotalCount = 0 }
                     };
                 }
 
-                var maxResults = Math.Min(foundList.Count, 1000);
+                // Initialize the found list for reading results
+                foundList.Initialize();
+
+                var count = foundList.Count;
+                if (count <= 0)
+                {
+                    return new MemScanResponse
+                    {
+                        Success = true,
+                        Results = new ResultList { TotalCount = 0 }
+                    };
+                }
+
+                // Limit results to prevent memory issues (max 1000 results)
+                var maxResults = Math.Min(count, 1000);
                 var results = new ResultList
                 {
-                    TotalCount = foundList.Count
+                    TotalCount = count
                 };
 
                 for (int i = 0; i < maxResults; i++)
                 {
-                    var address = foundList.GetAddress(i);
-                    var value = foundList.GetValue(i); // Assuming FoundList exposes GetValue
-                    results.Add($"0x{address:X}", value);
+                    try
+                    {
+                        var address = foundList.GetAddress(i);
+                        var value = foundList.GetValue(i);
+                        results.Add(address, value);
+                    }
+                    catch (Exception ex)
+                    {
+                        // If we can't get individual results, break and return what we have
+                        System.Diagnostics.Debug.WriteLine($"Error getting result {i}: {ex.Message}");
+                        break;
+                    }
                 }
 
                 return new MemScanResponse
@@ -89,7 +116,13 @@ namespace CeMCP.Tools
         {
             try
             {
-                memoryScanner.FirstScan(new ScanParameters()); // Reset via new scan object
+                // Get current found list and deinitialize it if it exists
+                var currentFoundList = memoryScanner.GetAttachedFoundList();
+                if (currentFoundList != null && currentFoundList.IsInitialized)
+                {
+                    currentFoundList.Deinitialize();
+                }
+
                 return new MemScanResponse
                 {
                     Success = true,

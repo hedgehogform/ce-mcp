@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using CESDK.Classes;
 using CeMCP.Models;
 
@@ -10,27 +11,32 @@ namespace CeMCP.Tools
         {
             try
             {
-                // Process list functionality not implemented in new CESDK yet
+                // Get process list using CESDK
+                var processDict = Process.GetProcessList();
+
+                // Convert Dictionary to ProcessInfo array
+                var processList = processDict
+                    .Select(kvp => new ProcessInfo
+                    {
+                        ProcessId = kvp.Key,
+                        ProcessName = kvp.Value
+                    })
+                    .OrderBy(p => p.ProcessName) // Sort by name for better usability
+                    .ToArray();
+
                 return new ProcessListResponse
                 {
-                    ProcessList =
-                    [
-                        new ProcessInfo
-                        {
-                            ProcessId = 0,
-                            ProcessName = "Process list functionality not implemented in new CESDK"
-                        }
-                    ],
+                    ProcessList = processList,
                     Success = true
                 };
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
                 return new ProcessListResponse
                 {
                     ProcessList = [],
                     Success = false,
-                    Error = e.Message
+                    Error = ex.Message
                 };
             }
         }
@@ -99,10 +105,7 @@ namespace CeMCP.Tools
                 // Get process ID using CESDK
                 var processId = Process.GetOpenedProcessID();
 
-                // Process name functionality not available in new CESDK yet
-                var processName = "Unknown";
-
-                // If no process is open, return an error message
+                // If no process is open, return closed status
                 if (processId == 0)
                 {
                     return new ProcessStatusResponse
@@ -110,9 +113,24 @@ namespace CeMCP.Tools
                         ProcessId = 0,
                         IsOpen = false,
                         ProcessName = "",
-                        Success = false,
-                        Error = "No process is currently open"
+                        Success = true
                     };
+                }
+
+                // Try to get the process name from the process list
+                var processName = "Unknown";
+                try
+                {
+                    var processDict = Process.GetProcessList();
+                    if (processDict.TryGetValue(processId, out var name))
+                    {
+                        processName = name;
+                    }
+                }
+                catch
+                {
+                    // If we can't get the process list, just use "Unknown"
+                    processName = "Unknown";
                 }
 
                 return new ProcessStatusResponse

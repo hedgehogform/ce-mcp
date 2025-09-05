@@ -35,18 +35,15 @@ uv sync
 ### Core Components
 
 - **Plugin.cs**: Main Cheat Engine plugin entry point that implements `CESDKPluginClass`
-
   - Manages MCP server lifecycle (start/stop)
   - Registers Lua functions for CE integration
   - Provides configuration UI through WPF window
 
 - **McpServer.cs**: OWIN-based web server that hosts the REST API
-
   - Uses Web API with Swagger documentation
   - Configurable host/port via environment variables or config file
 
 - **CheatEngineController.cs**: Main API controller with endpoints for:
-
   - Lua execution
   - Process management
   - Memory reading/writing
@@ -204,3 +201,21 @@ The server supports configuration through:
 3. Runtime configuration through WPF configuration window
 
 Default server runs on `http://127.0.0.1:6300` with Swagger UI available for API testing.
+
+## Important Implementation Notes
+
+### Lua Integration
+- Always use proper Lua stack management with `lua.Pop()` calls
+- Use `celua.txt` documentation as the definitive reference for Cheat Engine Lua API
+- Create proper CE objects (e.g., `createStringlist()`) rather than Lua tables when required by CE functions
+- Memory scanning requires: scan → `waitTillDone()` → `getAttachedFoundlist()` → `foundList.initialize()`
+
+### Error Handling
+- All tool methods should return response objects with `Success` boolean and optional `Error` message
+- Wrap Lua calls in try-catch blocks and provide meaningful error messages
+- Clean up Lua stack on exceptions to prevent memory leaks
+
+### Dark Mode Support
+- UI components support automatic dark/light theme detection via Windows registry
+- Use dynamic colors in WPF code that adapt to system theme
+- Status text colors should be theme-aware for visibility
