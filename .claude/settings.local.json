@@ -6,7 +6,10 @@
       "WebFetch(domain:github.com)",
       "mcp__ide__getDiagnostics",
       "Read(/C:\\Users\\Shadow\\Documents\\Coding\\cheat-engine\\Cheat Engine\\bin/**)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//c/Users/Shadow/Documents/Coding/cheat-engine/Cheat Engine/bin/**)",
+      "Read(//c/Users/Shadow/Documents/Coding/cheat-engine/Cheat Engine/plugin/c# template/CEPluginLibrary/**)"
     ],
     "deny": [],
     "ask": []

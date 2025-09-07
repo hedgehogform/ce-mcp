@@ -13,7 +13,6 @@ namespace CeMCP
         private ConversionTool? _conversionTool;
         private AobScanTool? _aobScanTool;
         private DisassembleTool? _disassembleTool;
-        private MemScanTool? _memScanTool;
         private AddressTool? _addressTool;
 
         private LuaExecutionTool LuaExecutionTool => _luaExecutionTool ??= new();
@@ -24,7 +23,6 @@ namespace CeMCP
         private ConversionTool ConversionTool => _conversionTool ??= new();
         private AobScanTool AobScanTool => _aobScanTool ??= new();
         private DisassembleTool DisassembleTool => _disassembleTool ??= new();
-        private MemScanTool MemScanTool => _memScanTool ??= new();
         private AddressTool AddressTool => _addressTool ??= new();
 
         public LuaResponse ExecuteLua(LuaRequest request)

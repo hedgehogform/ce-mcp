@@ -5,11 +5,12 @@ using CESDK.Classes;
 
 namespace CeMCP.Tools
 {
-    public class MemScanTool
+    public static class MemScanTool
     {
-        private static readonly MemScan memoryScanner = new();
+        private static MemScan? memoryScanner = null;
+        private static FoundList? foundList = null;
 
-        public MemScanResponse Scan(MemScanScanRequest request)
+        public static MemScanResponse Scan(MemScanScanRequest request)
         {
             try
             {
@@ -32,9 +33,17 @@ namespace CeMCP.Tools
                     IsPercentageScan = request.IsPercentageScan
                 };
 
-                // Determine if this is a first scan or next scan
-                var existingFoundList = memoryScanner.GetAttachedFoundList();
-                if (existingFoundList == null || existingFoundList.Count <= 0)
+                // Initialize scanner and foundlist if needed (first scan)
+                if (memoryScanner == null)
+                {
+                    memoryScanner = new MemScan();
+                    foundList = new FoundList(memoryScanner);
+                }
+
+                // Determine if this is a first scan or next scan based on previous results
+                bool isFirstScan = foundList == null || foundList.Count <= 0;
+
+                if (isFirstScan)
                 {
                     // Perform first scan
                     memoryScanner.FirstScan(parameters);
@@ -48,19 +57,8 @@ namespace CeMCP.Tools
                 // Wait for the scan to complete
                 memoryScanner.WaitTillDone();
 
-                // Get the attached found list after scan completion
-                var foundList = memoryScanner.GetAttachedFoundList();
-                if (foundList == null)
-                {
-                    return new MemScanResponse
-                    {
-                        Success = true,
-                        Results = new ResultList { TotalCount = 0 }
-                    };
-                }
-
                 // Initialize the found list for reading results
-                foundList.Initialize();
+                foundList!.Initialize();
 
                 var count = foundList.Count;
                 if (count <= 0)
@@ -83,7 +81,7 @@ namespace CeMCP.Tools
                 {
                     try
                     {
-                        var address = foundList.GetAddress(i);
+                        var address = foundList!.GetAddress(i);
                         var value = foundList.GetValue(i);
                         results.Add(address, value);
                     }
@@ -112,16 +110,13 @@ namespace CeMCP.Tools
             }
         }
 
-        public MemScanResponse ResetScan()
+        public static MemScanResponse ResetScan()
         {
             try
             {
-                // Get current found list and deinitialize it if it exists
-                var currentFoundList = memoryScanner.GetAttachedFoundList();
-                if (currentFoundList != null && currentFoundList.IsInitialized)
-                {
-                    currentFoundList.Deinitialize();
-                }
+                // Reset the scanner and create new instances
+                memoryScanner = new MemScan();
+                foundList = new FoundList(memoryScanner);
 
                 return new MemScanResponse
                 {
