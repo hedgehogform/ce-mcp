@@ -1,8 +1,12 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
-namespace CeMCP
+
+
+namespace CEMCP
 {
     public static class ServerConfig
     {
@@ -33,7 +37,7 @@ namespace CeMCP
                 if (File.Exists(ConfigFilePath))
                 {
                     var json = File.ReadAllText(ConfigFilePath);
-                    var config = JsonSerializer.Deserialize<ConfigData>(json);
+                    var config = JsonSerializer.Deserialize<ConfigData>(json, SourceGenerationContext.Default.ConfigData);
                     if (config != null)
                     {
                         ConfigHost = config.Host ?? ConfigHost;
@@ -65,7 +69,7 @@ namespace CeMCP
                     ServerName = ConfigServerName
                 };
 
-                var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+                var json = JsonSerializer.Serialize(config, SourceGenerationContext.Default.ConfigData);
                 File.WriteAllText(ConfigFilePath, json);
             }
             catch
@@ -74,11 +78,18 @@ namespace CeMCP
             }
         }
 
-        private sealed class ConfigData
+        internal sealed class ConfigData
         {
             public string? Host { get; set; }
             public int Port { get; set; }
             public string? ServerName { get; set; }
         }
+    }
+
+    // JSON Source Generator for trimming support
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    [JsonSerializable(typeof(ServerConfig.ConfigData))]
+    internal partial class SourceGenerationContext : JsonSerializerContext
+    {
     }
 }

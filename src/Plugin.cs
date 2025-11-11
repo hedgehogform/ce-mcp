@@ -1,16 +1,21 @@
-﻿using CESDK;
+﻿using CEMCP;
+using CEMCP.Views;
+using CESDK;
 using System;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
-namespace CeMCP
+
+namespace CEMCP
 {
     public class McpPlugin : CheatEnginePlugin
     {
         private bool isServerRunning = false;
         private McpServer? mcpServer;
-        private ConfigWindow? configWindow = null;
+        private Window? configWindow = null;
         private Thread? configThread = null;
 
         public bool IsServerRunning => isServerRunning;
@@ -98,8 +103,8 @@ namespace CeMCP
                     // Bring existing window to front
                     configWindow.Dispatcher?.BeginInvoke(new Action(() =>
                     {
-                        if (configWindow.WindowState == System.Windows.WindowState.Minimized)
-                            configWindow.WindowState = System.Windows.WindowState.Normal;
+                        if (configWindow.WindowState == WindowState.Minimized)
+                            configWindow.WindowState = WindowState.Normal;
                         configWindow.Activate();
                         configWindow.Topmost = true;
                         configWindow.Topmost = false;
@@ -113,7 +118,9 @@ namespace CeMCP
                 {
                     try
                     {
+                        // Create Window in code (no XAML)
                         configWindow = new ConfigWindow(this);
+
                         configWindow.Closed += (sender, e) =>
                         {
                             configWindow = null;
@@ -121,23 +128,44 @@ namespace CeMCP
                                 System.Windows.Threading.DispatcherPriority.Background);
                         };
 
-                        // Show the window and start WPF message loop
                         configWindow.Show();
+                        configWindow.Activate();
+                        configWindow.Topmost = true;
+                        configWindow.Topmost = false;
+                        configWindow.Focus();
                         System.Windows.Threading.Dispatcher.Run();
                     }
                     catch (Exception ex)
                     {
-                        PluginContext.Lua.DoString($"print('Error in config window thread: {ex.Message}')");
+                        var msg = $"Error in window thread: {ex.Message}";
+                        if (ex.InnerException != null)
+                            msg += $" | Inner: {ex.InnerException.Message}";
+
+                        PluginContext.Lua.DoString($"print('Error: {msg.Replace("'", "\\'").Replace("\n", " ").Replace("\r", "")}')");
+
+                        try
+                        {
+                            System.IO.File.WriteAllText(@"c:\temp\ce-mcp-error.txt",
+                                $"Error: {ex.Message}\n" +
+                                $"Type: {ex.GetType().Name}\n" +
+                                $"Inner: {ex.InnerException?.Message}\n" +
+                                $"Stack: {ex.StackTrace}");
+                        }
+                        catch { }
                         configWindow = null;
                     }
                 });
 
-                configThread.SetApartmentState(ApartmentState.STA);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    configThread.SetApartmentState(ApartmentState.STA);
+                }
+
                 configThread.Start();
             }
             catch (Exception ex)
             {
-                PluginContext.Lua.DoString($"print('Error opening configuration: {ex.Message}')");
+                PluginContext.Lua.DoString($"print('Error in ShowMCPConfig: {ex.Message}')");
             }
         }
 
@@ -169,14 +197,46 @@ namespace CeMCP
         {
             if (isServerRunning) return;
 
-            mcpServer = new McpServer();
-            ServerConfig.LoadFromFile();
-            ServerConfig.LoadFromEnvironment(); // Environment variables override config file
-            mcpServer.Start(ServerConfig.ConfigBaseUrl);
+            try
+            {
+                mcpServer = new McpServer();
+                ServerConfig.LoadFromFile();
+                ServerConfig.LoadFromEnvironment(); // Environment variables override config file
+                mcpServer.Start(ServerConfig.ConfigBaseUrl);
 
-            isServerRunning = true;
-            PluginContext.Lua.DoString($"print('MCP API Started on: {ServerConfig.ConfigBaseUrl}')");
-            UpdateButtonText();
+                isServerRunning = true;
+                PluginContext.Lua.DoString($"print('MCP API Started on: {ServerConfig.ConfigBaseUrl}')");
+                UpdateButtonText();
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = $"Failed to start MCP Server: {ex.Message}";
+                if (ex.InnerException != null)
+                    errorMsg += $"\nInner: {ex.InnerException.Message}";
+
+                PluginContext.Lua.DoString($"print('Error: {errorMsg.Replace("'", "\\'").Replace("\n", " ")}')");
+
+                // Also try to write to a log file for debugging
+                try
+                {
+                    var logPath = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "CeMCP",
+                        "error.log"
+                    );
+                    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath)!);
+                    System.IO.File.WriteAllText(logPath,
+                        $"[{DateTime.Now}] {errorMsg}\n" +
+                        $"Type: {ex.GetType().FullName}\n" +
+                        $"Stack: {ex.StackTrace}\n" +
+                        (ex.InnerException != null ? $"Inner Stack: {ex.InnerException.StackTrace}\n" : "")
+                    );
+                }
+                catch
+                {
+                    // Ignore file write errors - logging is best effort only
+                }
+            }
         }
 
         void StopMCPServer()

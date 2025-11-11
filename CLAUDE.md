@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Cheat Engine MCP (Model Context Protocol) Server that provides REST API access to Cheat Engine functionality through a C# plugin and Python MCP client. The project enables AI tools to interact with Cheat Engine for memory analysis, process manipulation, and debugging tasks.
+This is a Cheat Engine MCP (Model Context Protocol) Server that provides MCP tool access to Cheat Engine functionality through a C# plugin using the official MCP C# SDK. The project enables AI tools to interact with Cheat Engine for memory analysis, process manipulation, and debugging tasks via Server-Sent Events (SSE).
 
 ## Build Commands
 
@@ -39,19 +39,14 @@ uv sync
   - Registers Lua functions for CE integration
   - Provides configuration UI through WPF window
 
-- **McpServer.cs**: OWIN-based web server that hosts the REST API
-  - Uses Web API with Swagger documentation
+- **McpServer.cs**: MCP SSE server using the official Model Context Protocol C# SDK
+  - Exposes all Cheat Engine functionality as MCP tools
+  - Runs in SSE (Server-Sent Events) mode for compatibility with CE plugin environment
   - Configurable host/port via environment variables or config file
 
-- **CheatEngineController.cs**: Main API controller with endpoints for:
-  - Lua execution
-  - Process management
-  - Memory reading/writing
-  - AOB scanning
-  - Disassembly
-  - Memory scanning
-
 - **CheatEngineTools.cs**: Service layer that delegates to specialized tools in `/Tools` directory
+  - All tools are exposed via MCP protocol
+  - Includes: Lua execution, process management, memory operations, AOB scanning, disassembly, memory scanning
 
 ### SDK Layer (`/SDK`)
 
@@ -72,11 +67,9 @@ Wrapper classes around Cheat Engine SDK functionality:
   - Configuration file: `%APPDATA%\CeMCP\config.json`
   - Environment variable overrides: `MCP_HOST`, `MCP_PORT`
 
-### Python MCP Client
+### Python MCP Client (Legacy)
 
-- **cheat_engine_mcp_server.py**: FastMCP-based server that exposes tools for AI interaction
-- Provides async wrappers for all REST API endpoints
-- Uses httpx for HTTP communication with configurable timeout (600s)
+Note: The Python MCP client is now deprecated as the C# plugin directly implements the MCP protocol using the official SDK. You can connect directly to the MCP SSE server from any MCP-compatible client.
 
 ## Development Workflow
 
@@ -84,11 +77,11 @@ Wrapper classes around Cheat Engine SDK functionality:
 2. Copy `ce-mcp.dll` from `bin/` to Cheat Engine plugins directory
 3. Enable the plugin in Cheat Engine
 4. Use "MCP" menu to start/configure the server
-5. Test endpoints at `http://localhost:6300/swagger`
+5. Connect to the MCP SSE server at `http://localhost:6300` using any MCP-compatible client
 
 ## Adding New Tools
 
-To add a new tool/endpoint to the MCP server:
+To add a new MCP tool to the server:
 
 **Important**: Always examine existing implementations first. Look at similar tools in `/Tools`, models in `/Models`, and SDK wrappers in `/SDK` to understand patterns and conventions.
 
@@ -152,32 +145,37 @@ public NewFeatureResponse DoSomething(NewFeatureRequest request)
 }
 ```
 
-### 5. Add Controller Endpoint
-Add endpoint to `CheatEngineController.cs`:
+### 5. Add MCP Tool in McpServer.cs
+Add the MCP tool definition in the `ConfigureTools` method in `McpServer.cs`:
 ```csharp
-[HttpPost]
-[Route("new-feature")]
-public NewFeatureResponse DoSomething([FromBody] NewFeatureRequest request)
-{
-    return tools.DoSomething(request);
-}
-```
-
-### 6. Add Python MCP Tool
-Add corresponding tool in `ce-mcp-client/src/cheat_engine_mcp_server.py`:
-```python
-@mcp.tool()
-async def do_something(parameter: str) -> Dict[str, Any]:
-    """
-    Description of what this tool does
-    
-    Args:
-        parameter: Description of the parameter
-        
-    Returns:
-        Dictionary with result and success status
-    """
-    return await make_request("new-feature", "POST", {"Parameter": parameter})
+builder.AddTool("do_something", "Description of what this tool does",
+    async (arguments, cancellationToken) =>
+    {
+        var request = new NewFeatureRequest
+        {
+            Parameter = arguments.GetValueOrDefault("parameter")?.ToString() ?? ""
+        };
+        var response = _tools.DoSomething(request);
+        return new
+        {
+            success = response.Success,
+            result = response.Result,
+            error = response.Error
+        };
+    },
+    new Dictionary<string, object>
+    {
+        ["type"] = "object",
+        ["properties"] = new Dictionary<string, object>
+        {
+            ["parameter"] = new Dictionary<string, object>
+            {
+                ["type"] = "string",
+                ["description"] = "Description of the parameter"
+            }
+        },
+        ["required"] = new[] { "parameter" }
+    });
 ```
 
 ## Project Structure
@@ -185,10 +183,9 @@ async def do_something(parameter: str) -> Dict[str, Any]:
 ```
 ├── SDK/                    # Cheat Engine SDK wrappers
 ├── Tools/                  # Specialized functionality tools
-├── Controllers/            # Web API controllers
 ├── Models/                 # Data transfer objects
-├── ce-mcp-client/         # Python MCP client
-│   └── src/cheat_engine_mcp_server.py
+├── McpServer.cs           # MCP SSE server implementation
+├── CheatEngineTools.cs    # Service layer for tools
 └── Plugin.cs              # Main plugin entry point
 ```
 
@@ -200,7 +197,7 @@ The server supports configuration through:
 2. Configuration file at `%APPDATA%\CeMCP\config.json`
 3. Runtime configuration through WPF configuration window
 
-Default server runs on `http://127.0.0.1:6300` with Swagger UI available for API testing.
+Default server runs on `http://127.0.0.1:6300` as an MCP SSE server.
 
 ## Important Implementation Notes
 
