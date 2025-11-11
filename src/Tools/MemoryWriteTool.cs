@@ -1,11 +1,42 @@
 using System;
 using System.Linq;
 using CESDK.Classes;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 
 namespace Tools
 {
     public static class MemoryWriteTool
     {
+        /// <summary>
+        /// Maps memory write API endpoints
+        /// </summary>
+        public static void MapMemoryWriteApi(this WebApplication app)
+        {
+            // POST /api/memory/write - Write memory at address
+            app.MapPost("/api/memory/write", (MemoryWriteRequest request) =>
+            {
+                try
+                {
+                    var value = WriteMemory(
+                        request.Address ?? "",
+                        request.DataType ?? "",
+                        request.Value!,
+                        request.MaxLength,
+                        request.WideChar ?? false);
+                    return Results.Ok(new { success = true, value });
+                }
+                catch (Exception ex)
+                {
+                    return Results.Ok(new { success = false, error = ex.Message });
+                }
+            })
+            .WithName("WriteMemory")
+            .WithDescription("Write a value to memory at the given address")
+            .WithOpenApi();
+        }
+
+
         /// <summary>
         /// Writes a value to memory at the given address.
         /// </summary>
@@ -115,4 +146,11 @@ namespace Tools
             return text;
         }
     }
+
+    public record MemoryWriteRequest(
+        string? Address,
+        string? DataType,
+        object? Value,
+        int? MaxLength = null,
+        bool? WideChar = false);
 }

@@ -1,16 +1,41 @@
 using System;
 using CESDK;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 
 namespace Tools
 {
     public static class LuaExecutionTool
     {
         /// <summary>
+        /// Maps Lua execution API endpoints
+        /// </summary>
+        public static void MapLuaApi(this WebApplication app)
+        {
+            // POST /api/lua/execute - Execute Lua code
+            app.MapPost("/api/lua/execute", (LuaExecuteRequest request) =>
+            {
+                try
+                {
+                    var result = ExecuteLua(request.Script ?? "");
+                    return Results.Ok(new { success = true, result });
+                }
+                catch (Exception ex)
+                {
+                    return Results.Ok(new { success = false, error = ex.Message });
+                }
+            })
+            .WithName("ExecuteLua")
+            .WithDescription("Execute a Lua script in Cheat Engine")
+            .WithOpenApi();
+        }
+
+        /// <summary>
         /// Executes Lua code and returns the top return value as a string (if any).
         /// </summary>
         /// <param name="code">The Lua code to execute</param>
         /// <returns>Result of the Lua execution</returns>
-        public static string ExecuteLua(string code)
+        private static string ExecuteLua(string code)
         {
             if (string.IsNullOrWhiteSpace(code))
                 throw new ArgumentException("Code parameter is required.", nameof(code));
@@ -58,4 +83,6 @@ namespace Tools
             }
         }
     }
+
+    public record LuaExecuteRequest(string? Script);
 }

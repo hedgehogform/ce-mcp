@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using CEMCP.Models;
 
@@ -22,6 +23,7 @@ namespace CEMCP.Views
         private Button testButton = null!;
         private Button startStopButton = null!;
         private Button openApiButton = null!;
+        private TextBlock statusTextBlock = null!;
 
         public ConfigWindow(McpPlugin plugin)
         {
@@ -135,7 +137,7 @@ namespace CEMCP.Views
             Grid.SetColumn(statusLabel, 0);
             mainGrid.Children.Add(statusLabel);
 
-            var statusTextBlock = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5, 2, 5, 2), FontWeight = FontWeights.Bold, Foreground = Brushes.Gray };
+            statusTextBlock = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5, 2, 5, 2), FontWeight = FontWeights.Bold, Foreground = Brushes.Gray };
             statusTextBlock.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("ServerStatus"));
             Grid.SetRow(statusTextBlock, row);
             Grid.SetColumn(statusTextBlock, 1);
@@ -157,7 +159,7 @@ namespace CEMCP.Views
             buttonPanel.Children.Add(testButton);
 
             startStopButton = new Button { Padding = new Thickness(12, 8, 12, 8), Width = 140, Margin = new Thickness(2, 2, 2, 2) };
-            startStopButton.SetBinding(ContentControl.ContentProperty, new System.Windows.Data.Binding("StartStopButtonText"));
+            startStopButton.SetBinding(ContentProperty, new System.Windows.Data.Binding("StartStopButtonText"));
             startStopButton.Click += StartStopButton_Click;
             buttonPanel.Children.Add(startStopButton);
 
@@ -183,6 +185,15 @@ namespace CEMCP.Views
         {
             bool isRunning = _plugin?.GetServerWrapper()?.IsRunning == true;
             _viewModel.ServerStatus = isRunning ? "Running" : "Stopped";
+
+            // Update status text block color based on server status
+            if (statusTextBlock != null)
+            {
+                statusTextBlock.Foreground = isRunning
+                    ? new SolidColorBrush(Color.FromRgb(0, 200, 0))      // Green for Running
+                    : new SolidColorBrush(Color.FromRgb(200, 0, 0));      // Red for Stopped
+            }
+
             openApiButton.IsEnabled = isRunning;
         }
 
@@ -205,7 +216,7 @@ namespace CEMCP.Views
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                var response = await client.GetAsync($"{_viewModel.BaseUrl}/api/cheatengine/health");
+                var response = await client.GetAsync($"{_viewModel.BaseUrl}/scalar/v1");
                 _viewModel.TestResult = response.IsSuccessStatusCode
                     ? "✓ Connection successful! Server is responding."
                     : $"✗ Server responded with status: {response.StatusCode}";
@@ -251,7 +262,7 @@ namespace CEMCP.Views
         {
             try
             {
-                if (_plugin?.GetServerWrapper()?.IsRunning != true)
+                if (!_plugin?.GetServerWrapper()?.IsRunning == true)
                 {
                     _viewModel.TestResult = "Server is not running. Please start the server first.";
                     return;
@@ -325,10 +336,10 @@ namespace CEMCP.Views
             var style = new Style(typeof(Button));
 
             // Default appearance
-            style.Setters.Add(new Setter(Button.BackgroundProperty, background));
-            style.Setters.Add(new Setter(Button.ForegroundProperty, foreground));
-            style.Setters.Add(new Setter(Button.BorderBrushProperty, border));
-            style.Setters.Add(new Setter(Button.BorderThicknessProperty, new Thickness(1)));
+            style.Setters.Add(new Setter(BackgroundProperty, background));
+            style.Setters.Add(new Setter(ForegroundProperty, foreground));
+            style.Setters.Add(new Setter(BorderBrushProperty, border));
+            style.Setters.Add(new Setter(BorderThicknessProperty, new Thickness(1)));
 
             // Create control template to remove default WPF button styling
             var template = new ControlTemplate(typeof(Button));
@@ -340,24 +351,24 @@ namespace CEMCP.Views
             borderFactory.SetValue(Border.PaddingProperty, new Thickness(1));
 
             var contentPresenterFactory = new FrameworkElementFactory(typeof(ContentPresenter));
-            contentPresenterFactory.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-            contentPresenterFactory.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+            contentPresenterFactory.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            contentPresenterFactory.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
 
             borderFactory.AppendChild(contentPresenterFactory);
             template.VisualTree = borderFactory;
 
             // Mouse over trigger
-            var mouseOverTrigger = new Trigger { Property = Button.IsMouseOverProperty, Value = true };
-            mouseOverTrigger.Setters.Add(new Setter(Button.BackgroundProperty, hoverBackground, "border"));
+            var mouseOverTrigger = new Trigger { Property = IsMouseOverProperty, Value = true };
+            mouseOverTrigger.Setters.Add(new Setter(BackgroundProperty, hoverBackground, "border"));
             template.Triggers.Add(mouseOverTrigger);
 
             // Disabled trigger
-            var disabledTrigger = new Trigger { Property = Button.IsEnabledProperty, Value = false };
-            disabledTrigger.Setters.Add(new Setter(Button.BackgroundProperty, disabledBackground, "border"));
-            disabledTrigger.Setters.Add(new Setter(Button.ForegroundProperty, disabledForeground));
+            var disabledTrigger = new Trigger { Property = IsEnabledProperty, Value = false };
+            disabledTrigger.Setters.Add(new Setter(BackgroundProperty, disabledBackground, "border"));
+            disabledTrigger.Setters.Add(new Setter(ForegroundProperty, disabledForeground));
             template.Triggers.Add(disabledTrigger);
 
-            style.Setters.Add(new Setter(Button.TemplateProperty, template));
+            style.Setters.Add(new Setter(TemplateProperty, template));
             button.Style = style;
         }
     }

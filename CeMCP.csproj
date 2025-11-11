@@ -22,6 +22,9 @@
     <!-- Generate runtime config to help find framework assemblies -->
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
 
+    <!-- Force .NET 9.0.10 to match NuGet package versions -->
+    <RuntimeFrameworkVersion>9.0.10</RuntimeFrameworkVersion>
+
     <!-- WPF -->
     <UseWPF>true</UseWPF>
     <PlatformTarget>x64</PlatformTarget>
@@ -34,9 +37,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.3" />
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.4.0-preview.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />
   </ItemGroup>
 </Project>

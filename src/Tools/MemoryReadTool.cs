@@ -1,10 +1,40 @@
 using System;
 using CESDK.Classes;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 
 namespace Tools
 {
     public static class MemoryReadTool
     {
+        /// <summary>
+        /// Maps memory read API endpoints
+        /// </summary>
+        public static void MapMemoryReadApi(this WebApplication app)
+        {
+            // POST /api/memory/read - Read memory at address
+            app.MapPost("/api/memory/read", (MemoryReadRequest request) =>
+            {
+                try
+                {
+                    var value = ReadMemory(
+                        request.Address ?? "",
+                        request.DataType ?? "",
+                        request.ByteCount,
+                        request.MaxLength,
+                        request.WideChar ?? false);
+                    return Results.Ok(new { success = true, value });
+                }
+                catch (Exception ex)
+                {
+                    return Results.Ok(new { success = false, error = ex.Message });
+                }
+            })
+            .WithName("ReadMemory")
+            .WithDescription("Read memory at the given address with the specified data type")
+            .WithOpenApi();
+        }
+
         /// <summary>
         /// Reads memory at the given address with the specified data type.
         /// </summary>
@@ -14,7 +44,7 @@ namespace Tools
         /// <param name="maxLength">Max length for strings (required for "string")</param>
         /// <param name="wideChar">Whether string is wide char (UTF-16)</param>
         /// <returns>Read value as object</returns>
-        public static object ReadMemory(
+        private static object ReadMemory(
             string addressString,
             string dataType,
             int? byteCount = null,
@@ -57,4 +87,11 @@ namespace Tools
             }
         }
     }
+
+    public record MemoryReadRequest(
+        string? Address,
+        string? DataType,
+        int? ByteCount = null,
+        int? MaxLength = null,
+        bool? WideChar = false);
 }

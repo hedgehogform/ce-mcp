@@ -14,7 +14,7 @@ namespace CEMCP
     public class McpPlugin : CheatEnginePlugin
     {
         private bool isServerRunning = false;
-        private McpServer? mcpServer;
+        private ApiServer? mcpServer;
         private Window? configWindow = null;
         private Thread? configThread = null;
 
@@ -178,7 +178,7 @@ namespace CEMCP
             }
         }
 
-        public McpServer? GetServerWrapper()
+        public ApiServer? GetServerWrapper()
         {
             return mcpServer;
         }
@@ -199,13 +199,13 @@ namespace CEMCP
 
             try
             {
-                mcpServer = new McpServer();
+                mcpServer = new ApiServer();
                 ServerConfig.LoadFromFile();
                 ServerConfig.LoadFromEnvironment(); // Environment variables override config file
                 mcpServer.Start(ServerConfig.ConfigBaseUrl);
 
                 isServerRunning = true;
-                PluginContext.Lua.DoString($"print('MCP API Started on: {ServerConfig.ConfigBaseUrl}')");
+                PluginContext.Lua.DoString($"print('Scalar API Started on: {ServerConfig.ConfigBaseUrl}')");
                 UpdateButtonText();
             }
             catch (Exception ex)
@@ -246,7 +246,7 @@ namespace CEMCP
             mcpServer?.Stop();
             mcpServer = null;
             isServerRunning = false;
-            PluginContext.Lua.DoString("print('MCP API stopped')");
+            PluginContext.Lua.DoString("print('Scalar API stopped')");
             UpdateButtonText();
         }
     }

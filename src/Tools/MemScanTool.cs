@@ -1,5 +1,9 @@
 using System;
+using System.ComponentModel;
+using System.Linq;
 using CESDK.Classes;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 
 namespace Tools
 {
@@ -7,6 +11,65 @@ namespace Tools
     {
         private static MemScan? memoryScanner = null;
         private static FoundList? foundList = null;
+
+        /// <summary>
+        /// Maps memory scan API endpoints
+        /// </summary>
+        public static void MapMemScanApi(this WebApplication app)
+        {
+            // POST /api/memscan/scan - Perform memory scan
+            app.MapPost("/api/memscan/scan", (MemScanRequest request) =>
+            {
+                try
+                {
+                    var results = Scan(
+                        request.ScanOption,
+                        request.VarType,
+                        request.Input1,
+                        request.Input2,
+                        request.StartAddress,
+                        request.StopAddress,
+                        request.ProtectionFlags,
+                        request.AlignmentType,
+                        request.AlignmentParam,
+                        request.IsHexadecimalInput,
+                        request.IsUnicodeScan,
+                        request.IsCaseSensitive,
+                        request.IsPercentageScan);
+
+                    return Results.Ok(new
+                    {
+                        success = true,
+                        count = results.Length,
+                        results = results.Select(r => new { address = $"0x{r.Address:X}", value = r.Value })
+                    });
+                }
+                catch (Exception ex)
+                {
+                    return Results.Ok(new { success = false, error = ex.Message });
+                }
+            })
+            .WithName("MemScan")
+            .WithDescription("Perform a memory scan for values")
+            .WithOpenApi();
+
+            // POST /api/memscan/reset - Reset memory scan state
+            app.MapPost("/api/memscan/reset", () =>
+            {
+                try
+                {
+                    ResetScan();
+                    return Results.Ok(new { success = true });
+                }
+                catch (Exception ex)
+                {
+                    return Results.Ok(new { success = false, error = ex.Message });
+                }
+            })
+            .WithName("ResetMemScan")
+            .WithDescription("Reset the memory scan state")
+            .WithOpenApi();
+        }
 
         /// <summary>
         /// Performs a memory scan.
@@ -25,7 +88,7 @@ namespace Tools
         /// <param name="isCaseSensitive">Case-sensitive for strings</param>
         /// <param name="isPercentageScan">Whether to scan as percentage</param>
         /// <returns>Array of found addresses and values</returns>
-        public static (ulong Address, object Value)[] Scan(
+        private static (ulong Address, object Value)[] Scan(
             ScanOption scanOption,
             VariableType varType,
             string input1,
@@ -96,10 +159,51 @@ namespace Tools
         /// <summary>
         /// Resets the memory scan state.
         /// </summary>
-        public static void ResetScan()
+        private static void ResetScan()
         {
             memoryScanner = new MemScan();
             foundList = new FoundList(memoryScanner);
         }
     }
+
+    public record MemScanRequest(
+         [property: DefaultValue(ScanOption.soExactValue)]
+        ScanOption ScanOption = ScanOption.soExactValue,
+
+         [property: DefaultValue(VariableType.vtDword)]
+        VariableType VarType = VariableType.vtDword,
+
+         [property: DefaultValue("")]
+        string Input1 = "",
+
+         [property: DefaultValue(null)]
+        string? Input2 = null,
+
+         [property: DefaultValue((ulong)0)]
+        ulong StartAddress = 0,
+
+         [property: DefaultValue(ulong.MaxValue)]
+        ulong StopAddress = ulong.MaxValue,
+
+         [property: DefaultValue("+W-C")]
+        string ProtectionFlags = "+W-C",
+
+         [property: DefaultValue(AlignmentType.fsmAligned)]
+        AlignmentType AlignmentType = AlignmentType.fsmAligned,
+
+         [property: DefaultValue("4")]
+        string AlignmentParam = "4",
+
+         [property: DefaultValue(false)]
+        bool IsHexadecimalInput = false,
+
+         [property: DefaultValue(false)]
+        bool IsUnicodeScan = false,
+
+         [property: DefaultValue(false)]
+        bool IsCaseSensitive = false,
+
+         [property: DefaultValue(false)]
+        bool IsPercentageScan = false
+     );
 }
