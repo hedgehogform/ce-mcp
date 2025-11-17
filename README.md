@@ -11,15 +11,15 @@ A Model Context Protocol (MCP) server plugin for Cheat Engine that provides acce
 
 ## Architecture
 
-This project uses the official [Model Context Protocol C# SDK](https://github.com/modelcontextprotocol/csharp-sdk) to expose Cheat Engine functionality as MCP tools over Server-Sent Events (SSE).
+This project exposes Cheat Engine functionality through a REST API server built with ASP.NET Core.
 
-- **MCP SSE Server**: Runs on `http://localhost:6300` with `/sse` and `/messages` endpoints
-- **17 MCP Tools**: Lua execution, process management, memory operations, AOB scanning, disassembly, and more
-- **Single DLL**: All dependencies embedded using Costura.Fody
+- **REST API Server**: Runs on `http://localhost:6300` with OpenAPI documentation at `/scalar/v1`
+- **17+ API Endpoints**: Lua execution, process management, memory operations, AOB scanning, disassembly, and more
+- **Single DLL Plugin**: All dependencies embedded - just drop into Cheat Engine plugins folder
 
 ## Related Projects
 
-- **Python MCP Client** (Legacy): [hedgehogform/ce-mcp-client](https://github.com/hedgehogform/ce-mcp-client) - Deprecated, connect directly to MCP SSE server instead
+- **Python MCP Client**: [hedgehogform/ce-mcp-client](https://github.com/hedgehogform/ce-mcp-client) - Wraps the REST API with MCP SSE server for AI clients like Claude Desktop
 
 <!-- ## Current Features
 
@@ -82,25 +82,9 @@ uv sync
 1. Build the plugin and copy to Cheat Engine plugins directory
 2. Start Cheat Engine and enable the plugin
 3. Use "MCP" menu to start the server
-4. Connect to the MCP SSE server at `http://localhost:6300` using any MCP-compatible client (Claude Desktop, etc.)
+4. Access the REST API at `http://localhost:6300` or view documentation at `http://localhost:6300/scalar/v1`
+5. For AI integration, use [ce-mcp-client](https://github.com/hedgehogform/ce-mcp-client) to connect Claude Desktop or other MCP clients
 
-### Available MCP Tools
+### Available API Endpoints
 
-Connect your AI client to `http://localhost:6300` to access these tools:
-
-- `ExecuteLua` - Execute Lua code in Cheat Engine
-- `GetProcessList` - Get list of running processes
-- `OpenProcess` - Open a process by ID or name
-- `GetThreadList` - Get threads in current process
-- `GetProcessStatus` - Get currently opened process status
-- `ReadMemory` - Read memory from address
-- `WriteMemory` - Write value to memory address
-- `Convert` - Convert between number formats
-- `AobScan` - Search for byte patterns in memory
-- `Disassemble` - Disassemble instructions at address
-- `MemScan` - Scan memory for specific values
-- `MemScanReset` - Reset memory scanner state
-- `GetAddressSafe` - Resolve symbolic addresses
-- `GetNameFromAddress` - Get symbol name from address
-- `InModule` - Check if address is in module
-- `InSystemModule` - Check if address is in system module
+For complete API documentation with interactive examples, visit `http://localhost:6300/scalar/v1` after starting the server.
