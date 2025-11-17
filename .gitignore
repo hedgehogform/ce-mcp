@@ -383,3 +383,6 @@ FodyWeavers.xsd
 cheat-engine/
 ce-mcp-client/
 celua.txt
+
+# Claude Code
+.claude/settings.local.json
