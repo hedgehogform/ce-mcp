@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using CESDK.Classes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -34,15 +33,15 @@ namespace Tools
         }
 
         /// <summary>
-        /// Gets all threads as string representations.
+        /// Gets all threads as hex ID strings.
         /// </summary>
-        /// <returns>Array of thread strings</returns>
+        /// <returns>Array of thread IDs in hex format</returns>
         private static string[] GetThreadList()
         {
             try
             {
-                var threads = threadList.GetAllThreads();
-                return threads.Select(t => t.ToString()).ToArray();
+                threadList.Refresh(); // Refresh to get current threads
+                return threadList.GetAllThreads();
             }
             catch (SystemException ex)
             {
