@@ -145,13 +145,23 @@ namespace CEMCP
 
                         try
                         {
-                            System.IO.File.WriteAllText(@"c:\temp\ce-mcp-error.txt",
-                                $"Error: {ex.Message}\n" +
+                            var logPath = System.IO.Path.Combine(
+                                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                "CeMCP",
+                                "error.log"
+                            );
+                            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath)!);
+                            System.IO.File.AppendAllText(logPath,
+                                $"[{DateTime.Now}] Window Error: {ex.Message}\n" +
                                 $"Type: {ex.GetType().Name}\n" +
                                 $"Inner: {ex.InnerException?.Message}\n" +
-                                $"Stack: {ex.StackTrace}");
+                                $"Stack: {ex.StackTrace}\n\n");
                         }
-                        catch { }
+                        catch
+                        {
+                            // Best-effort logging - ignore file write failures (e.g., permission issues, disk full)
+                            // The error was already logged to CE console via Lua print above
+                        }
                         configWindow = null;
                     }
                 });
