@@ -28,7 +28,7 @@ jobs:
         run: nuget restore CeMCP.sln
 
       - name: Build ${{ matrix.configuration }}
-        run: msbuild CeMCP.sln /p:Configuration=${{ matrix.configuration }} /p:Platform="Any CPU"
+        run: msbuild CeMCP.sln /p:Configuration=${{ matrix.configuration }} /p:Platform="x64"
 
       - name: Upload build artifacts (${{ matrix.configuration }})
         uses: actions/upload-artifact@v4
