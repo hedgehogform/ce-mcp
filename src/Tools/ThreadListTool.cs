@@ -43,13 +43,9 @@ namespace Tools
                 threadList.Refresh(); // Refresh to get current threads
                 return threadList.GetAllThreads();
             }
-            catch (SystemException ex)
-            {
-                throw new InvalidOperationException("Failed to get thread list.", ex);
-            }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("An unexpected error occurred while getting thread list.", ex);
+                throw new InvalidOperationException("Failed to get thread list.", ex);
             }
         }
     }

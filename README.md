@@ -30,7 +30,7 @@ This project exposes Cheat Engine functionality through a REST API server built 
 
 - **Cheat Engine 7.6.2+** (minimum version with .NET Core plugin support)
 - .NET 9.0 SDK
-- Windows OS
+- Windows OS (I don't have a mac but if you can run it then open an issue and let me know.)
 
 > [!IMPORTANT]
 > Cheat Engine 7.6.2 or newer is required. Older versions do not support .NET Core plugins.
