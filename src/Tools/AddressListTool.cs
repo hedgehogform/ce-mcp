@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text.Json;
-using CESDK;
 using CESDK.Classes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -11,29 +9,6 @@ namespace Tools
 {
     public static class AddressListTool
     {
-        /// <summary>
-        /// Executes Lua code wrapped in synchronize() for GUI thread safety
-        /// </summary>
-        private static string RunSync(string luaCode)
-        {
-            var lua = PluginContext.Lua;
-            var wrappedCode = $"return synchronize(function() {luaCode} end)";
-
-            lua.DoString(wrappedCode);
-
-            string result = "";
-            if (lua.IsString(-1))
-                result = lua.ToString(-1) ?? "";
-            else if (lua.IsNumber(-1))
-                result = lua.ToNumber(-1).ToString();
-
-            lua.SetTop(0);
-            return result;
-        }
-
-        private static string Escape(string s) =>
-            s.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\"", "\\\"");
-
         public static void MapAddressListApi(this WebApplication app)
         {
             // GET /api/addresslist - Get all memory records
@@ -41,25 +16,27 @@ namespace Tools
             {
                 try
                 {
-                    var json = RunSync(@"
-                        local al = getAddressList()
-                        local t = {}
-                        for i = 0, al.Count - 1 do
-                            local r = al.getMemoryRecord(i)
-                            table.insert(t, string.format(
-                                '{""id"":%d,""index"":%d,""description"":""%s"",""address"":""%s"",""value"":""%s"",""active"":%s}',
-                                r.ID, r.Index,
-                                (r.Description or ''):gsub('""', '\\""'),
-                                (r.Address or ''):gsub('""', '\\""'),
-                                tostring(r.Value or ''):gsub('""', '\\""'),
-                                r.Active and 'true' or 'false'
-                            ))
-                        end
-                        return '[' .. table.concat(t, ',') .. ']'
-                    ");
+                    var records = CESDK.CESDK.Synchronize(() =>
+                    {
+                        var al = new AddressList();
+                        var result = new List<object>();
+                        for (int i = 0; i < al.Count; i++)
+                        {
+                            var r = al.GetMemoryRecord(i);
+                            result.Add(new
+                            {
+                                id = r.ID,
+                                index = r.Index,
+                                description = r.Description,
+                                address = r.Address,
+                                value = r.Value,
+                                active = r.Active
+                            });
+                        }
+                        return result;
+                    });
 
-                    var records = JsonSerializer.Deserialize<JsonElement>(string.IsNullOrEmpty(json) ? "[]" : json);
-                    return Results.Ok(new { success = true, count = records.GetArrayLength(), records });
+                    return Results.Ok(new { success = true, count = records.Count, records });
                 }
                 catch (Exception ex)
                 {
@@ -75,25 +52,23 @@ namespace Tools
             {
                 try
                 {
-                    var desc = Escape(request.Description);
-                    var addr = Escape(request.Address);
-                    var varType = (int)request.VarType;
-                    var value = Escape(request.Value);
+                    var record = CESDK.CESDK.Synchronize(() =>
+                    {
+                        var al = new AddressList();
+                        var r = al.CreateMemoryRecord();
+                        r.Description = request.Description;
+                        r.Address = request.Address;
+                        r.VarType = request.VarType;
+                        r.Value = request.Value;
+                        return new
+                        {
+                            id = r.ID,
+                            description = r.Description,
+                            address = r.Address,
+                            value = r.Value
+                        };
+                    });
 
-                    var json = RunSync($@"
-                        local al = getAddressList()
-                        local r = al.createMemoryRecord()
-                        r.Description = '{desc}'
-                        r.Address = '{addr}'
-                        r.Type = {varType}
-                        r.Value = '{value}'
-                        return string.format(
-                            '{{""id"":%d,""description"":""%s"",""address"":""%s"",""value"":""%s""}}',
-                            r.ID, (r.Description or ''):gsub('""', '\\""'), (r.Address or ''):gsub('""', '\\""'), tostring(r.Value or ''):gsub('""', '\\""')
-                        )
-                    ");
-
-                    var record = JsonSerializer.Deserialize<JsonElement>(json);
                     return Results.Ok(new { success = true, record });
                 }
                 catch (Exception ex)
@@ -110,38 +85,38 @@ namespace Tools
             {
                 try
                 {
-                    var findCode = GetFindCode(request.Id, request.Index, request.Description);
-                    var updates = new List<string>();
+                    var result = CESDK.CESDK.Synchronize(() =>
+                    {
+                        var al = new AddressList();
+                        var r = FindRecord(al, request.Id, request.Index, request.Description);
+                        if (r == null)
+                            return (object?)null;
 
-                    if (!string.IsNullOrEmpty(request.NewDescription))
-                        updates.Add($"r.Description = '{Escape(request.NewDescription)}'");
-                    if (!string.IsNullOrEmpty(request.NewAddress))
-                        updates.Add($"r.Address = '{Escape(request.NewAddress)}'");
-                    if (request.NewVarType.HasValue)
-                        updates.Add($"r.Type = {(int)request.NewVarType.Value}");
-                    if (!string.IsNullOrEmpty(request.NewValue))
-                        updates.Add($"r.Value = '{Escape(request.NewValue)}'");
-                    if (request.Active.HasValue)
-                        updates.Add($"r.Active = {(request.Active.Value ? "true" : "false")}");
+                        if (!string.IsNullOrEmpty(request.NewDescription))
+                            r.Description = request.NewDescription;
+                        if (!string.IsNullOrEmpty(request.NewAddress))
+                            r.Address = request.NewAddress;
+                        if (request.NewVarType.HasValue)
+                            r.VarType = request.NewVarType.Value;
+                        if (!string.IsNullOrEmpty(request.NewValue))
+                            r.Value = request.NewValue;
+                        if (request.Active.HasValue)
+                            r.Active = request.Active.Value;
 
-                    var updateCode = string.Join("\n", updates);
+                        return new
+                        {
+                            id = r.ID,
+                            description = r.Description,
+                            address = r.Address,
+                            value = r.Value,
+                            active = r.Active
+                        };
+                    });
 
-                    var json = RunSync($@"
-                        local al = getAddressList()
-                        local r = {findCode}
-                        if r == nil then return '{{""error"":""not found""}}' end
-                        {updateCode}
-                        return string.format(
-                            '{{""id"":%d,""description"":""%s"",""address"":""%s"",""value"":""%s"",""active"":%s}}',
-                            r.ID, (r.Description or ''):gsub('""', '\\""'), (r.Address or ''):gsub('""', '\\""'), tostring(r.Value or ''):gsub('""', '\\""'), r.Active and 'true' or 'false'
-                        )
-                    ");
-
-                    if (json.Contains("\"error\""))
+                    if (result == null)
                         return Results.Ok(new { success = false, error = "Record not found" });
 
-                    var record = JsonSerializer.Deserialize<JsonElement>(json);
-                    return Results.Ok(new { success = true, record });
+                    return Results.Ok(new { success = true, record = result });
                 }
                 catch (Exception ex)
                 {
@@ -157,17 +132,18 @@ namespace Tools
             {
                 try
                 {
-                    var findCode = GetFindCode(request.Id, request.Index, request.Description);
+                    var found = CESDK.CESDK.Synchronize(() =>
+                    {
+                        var al = new AddressList();
+                        var r = FindRecord(al, request.Id, request.Index, request.Description);
+                        if (r == null)
+                            return false;
 
-                    var result = RunSync($@"
-                        local al = getAddressList()
-                        local r = {findCode}
-                        if r == nil then return 'notfound' end
-                        r.destroy()
-                        return 'ok'
-                    ");
+                        al.DeleteMemoryRecord(r);
+                        return true;
+                    });
 
-                    if (result == "notfound")
+                    if (!found)
                         return Results.Ok(new { success = false, error = "Record not found" });
 
                     return Results.Ok(new { success = true });
@@ -186,13 +162,11 @@ namespace Tools
             {
                 try
                 {
-                    RunSync(@"
-                        local al = getAddressList()
-                        for i = al.Count - 1, 0, -1 do
-                            al.getMemoryRecord(i).destroy()
-                        end
-                        return 'ok'
-                    ");
+                    CESDK.CESDK.Synchronize(() =>
+                    {
+                        var al = new AddressList();
+                        al.Clear();
+                    });
                     return Results.Ok(new { success = true });
                 }
                 catch (Exception ex)
@@ -205,14 +179,14 @@ namespace Tools
             .WithOpenApi();
         }
 
-        private static string GetFindCode(int? id, int? index, string? description)
+        private static MemoryRecord? FindRecord(AddressList al, int? id, int? index, string? description)
         {
             if (id.HasValue)
-                return $"al.getMemoryRecordByID({id.Value})";
+                return al.GetMemoryRecordByID(id.Value);
             if (index.HasValue)
-                return $"al.getMemoryRecord({index.Value})";
+                return al.GetMemoryRecord(index.Value);
             if (!string.IsNullOrEmpty(description))
-                return $"al.getMemoryRecordByDescription('{Escape(description)}')";
+                return al.GetMemoryRecordByDescription(description);
 
             throw new ArgumentException("Provide id, index, or description to find the record");
         }
