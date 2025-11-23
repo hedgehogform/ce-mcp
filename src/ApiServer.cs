@@ -66,6 +66,7 @@ namespace CEMCP
       Tools.ConversionTool.MapConversionApi(app);
       Tools.ThreadListTool.MapThreadListApi(app);
       Tools.MemScanTool.MapMemScanApi(app);
+      Tools.AddressListTool.MapAddressListApi(app);
     }
 
     public void Stop()
