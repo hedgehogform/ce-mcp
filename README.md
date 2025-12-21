@@ -19,7 +19,7 @@ This project exposes Cheat Engine functionality through a REST API server built 
 
 ## Related Projects
 
-- **Python MCP Client**: [hedgehogform/ce-mcp-client](https://github.com/hedgehogform/ce-mcp-client) - Wraps the REST API with MCP SSE server for AI clients like Claude Desktop
+- **Python MCP Client**: [hedgehogform/ce-mcp-client](https://github.com/hedgehogform/ce-mcp-client) - Wraps the REST API with MCP STDIO for AI clients like Claude Desktop
 
 <!-- ## Current Features
 
