@@ -153,7 +153,7 @@ public static class MyResource
 ## GitHub Actions
 
 - **build-dlls.yml** — Builds Debug and Release DLLs on push/PR, uploads as artifacts
-- **build.yml** — SonarQube analysis workflow
+- **sonarqube.yml** — SonarQube code quality analysis workflow
 
 ## CESDK Submodule
 
