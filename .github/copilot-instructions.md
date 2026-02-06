@@ -4,6 +4,13 @@
 
 Cheat Engine MCP Server — a C# plugin that exposes Cheat Engine functionality as MCP tools over SSE (Server-Sent Events) using the official [Model Context Protocol C# SDK](https://github.com/modelcontextprotocol/csharp-sdk).
 
+## Cheat Engine Lua API Reference
+
+The full CE Lua API documentation is at `C:\Program Files\Cheat Engine\celua.txt`. Always consult this file when:
+- Adding new CESDK wrapper methods or tools
+- Verifying correct Lua function names, parameters, and return types
+- Understanding CE object models (MemScan, FoundList, AddressList, MemoryRecord, etc.)
+
 ## Build and Test
 
 ```bash
@@ -31,25 +38,21 @@ Deploy: copy `ce-mcp.dll` from `bin/` to Cheat Engine plugins directory, enable 
 
 All tools use `[McpServerToolType]` on the class and `[McpServerTool]` + `[Description]` on methods. Tools are static classes with static methods. Each returns anonymous objects with `success` boolean and either result data or `error` message.
 
-- **ProcessTool** — List processes, open by ID/name, get current process
-- **LuaExecutionTool** — Execute Lua scripts in CE with stack management
-- **MemoryReadTool** — Read memory (bytes, int32, int64, float, string)
-- **MemoryWriteTool** — Write memory values
-- **AOBScanTool** — Array of Bytes pattern scanning
-- **DisassembleTool** — Disassemble instructions at address
-- **AddressTool** — Resolve address expressions
+- **ProcessTool** — Process and thread management (list/open/get processes, list threads)
+- **MemoryTool** — Memory read and write (bytes, int8/16/32/64, float, double, string)
+- **ScanTool** — Memory scanning (AOB pattern scan, value scan with first/next, reset)
+- **AssemblyTool** — Disassembly and address resolution
+- **AddressListTool** — Cheat table CRUD operations (get/add/update/delete/clear records)
+- **LuaExecutionTool** — Execute arbitrary Lua scripts in CE with stack management
 - **ConversionTool** — String format conversion (MD5, ANSI/UTF8)
-- **ThreadListTool** — List process threads
-- **MemScanTool** — Memory value scanning with first/next scan pattern
-- **AddressListTool** — Cheat table CRUD operations
 
 ### SDK Layer (`CESDK/`)
 
-Git submodule — C# wrapper around Cheat Engine's Lua API. Key classes: `LuaEngine`, `MemoryAccess`, `Process`, `AOBScanner`, `Disassembler`, `MemScan`, `AddressList`.
+Git submodule — C# wrapper around Cheat Engine's Lua API. Key classes: `MemoryAccess`, `Process`, `AOBScanner`, `Disassembler`, `AddressResolver`, `MemScan`, `FoundList`, `AddressList`, `ThreadList`, `Converter`, `Speedhack`, `Debugger`, `SymbolWaiter`.
 
 ### Views (`src/Views/`)
 
-- **ConfigWindow.cs** — WPF config window (code-only, no XAML). Supports dark/light theme via `ThemeHelper`.
+- **ConfigWindow.xaml/.cs** — WPF config window. Supports dark/light theme via `ThemeHelper`.
 
 ## Adding New Tools
 
@@ -58,6 +61,7 @@ Git submodule — C# wrapper around Cheat Engine's Lua API. Key classes: `LuaEng
 3. Use `[Description]` on parameters for schema generation
 4. Return anonymous objects: `new { success = true, ... }` or `new { success = false, error = "..." }`
 5. Register in `McpServer.cs` via `.WithTools<Tools.YourTool>()`
+6. Consult `C:\Program Files\Cheat Engine\celua.txt` for correct Lua function signatures
 
 Example:
 ```csharp
@@ -80,7 +84,7 @@ public static class MyTool
 ## Code Style
 
 - C# with nullable reference types enabled, `TreatWarningsAsErrors`
-- Target: `net9.0-windows`, WPF enabled, x64 platform
+- Target: `net10.0-windows`, WPF enabled, x64 platform
 - Tools use static classes/methods, not instance-based
 - Wrap CE SDK calls in try-catch, always return structured response objects
 - Use proper Lua stack management (`GetTop`, `Pop`) when interacting with Lua
@@ -88,18 +92,19 @@ public static class MyTool
 ## Important Notes
 
 - **Lua stack**: Always clean up with `lua.Pop()` calls after reading values
-- **CE thread safety**: Use `CESDK.CESDK.Synchronize()` for operations that must run on CE's main thread (e.g., AddressList operations)
+- **CE thread safety**: Use `CESDK.Synchronize()` for operations that must run on CE's main thread (e.g., AddressList operations)
 - **Memory scanning**: Requires scan → `WaitTillDone()` → `foundList.Initialize()` sequence
 - **Dark mode**: UI adapts via Windows registry check (`ThemeHelper.IsInDarkMode()`)
 - Default server: `http://127.0.0.1:6300` with MCP SSE at `/sse`
+- **CE Lua API docs**: `C:\Program Files\Cheat Engine\celua.txt` — the authoritative reference for all CE Lua functions, objects, and their parameters
 
 ## CESDK Submodule
 
 The `CESDK/` directory is a git submodule providing the Cheat Engine SDK wrapper library:
 
 - **Core**: `CESDK.cs`, `CheatEnginePlugin.cs`, `PluginContext.cs`
-- **Lua**: `LuaEngine.cs` (high-level), `LuaNative.cs` (low-level C API)
-- **Memory**: `MemoryScanner.cs`, `ScanConfiguration.cs`, `ScanResults.cs`
-- **System**: `SystemInfo.cs`, `CEInterop.cs`
+- **Lua**: `LuaNative.cs` (low-level C API bindings)
+- **Classes**: `MemoryAccess`, `Process`, `AOBScanner`, `Disassembler`, `AddressResolver`, `MemScan`, `FoundList`, `AddressList`, `ThreadList`, `Converter`, `Speedhack`, `Debugger`, `SymbolWaiter`, `LuaLogger`
+- **Utils**: `LuaUtils.cs` (helper functions for Lua stack operations)
 
 Plugin pattern: inherit `CheatEnginePlugin`, implement `Name`/`OnEnable()`/`OnDisable()`, access Lua via `PluginContext.Lua`.

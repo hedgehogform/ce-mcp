@@ -5,10 +5,13 @@ using ModelContextProtocol.Server;
 
 namespace Tools
 {
+    /// <summary>
+    /// Disassembly and address resolution tools.
+    /// </summary>
     [McpServerToolType]
-    public class DisassembleTool
+    public class AssemblyTool
     {
-        private DisassembleTool() { }
+        private AssemblyTool() { }
 
         [McpServerTool(Name = "disassemble"), Description("Disassemble instructions or get instruction size at a memory address")]
         public static object Disassemble(
@@ -20,7 +23,7 @@ namespace Tools
                 if (string.IsNullOrWhiteSpace(address))
                     return new { success = false, error = "Address parameter is required" };
 
-                if (!ulong.TryParse(address.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong addr))
+                if (!TryParseAddress(address, out ulong addr))
                     return new { success = false, error = "Invalid address format" };
 
                 string result = requestType?.ToLower() switch
@@ -37,5 +40,28 @@ namespace Tools
                 return new { success = false, error = ex.Message };
             }
         }
+
+        [McpServerTool(Name = "resolve_address"), Description("Resolve an address from a string expression (supports symbols, module+offset, etc.)")]
+        public static object ResolveAddress(
+            [Description("Address string expression to resolve")] string addressString,
+            [Description("Whether to resolve as local address")] bool local = false)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(addressString))
+                    return new { success = false, error = "Address string is required" };
+
+                var address = AddressResolver.GetAddressSafe(addressString, local);
+                return new { success = true, address = address.HasValue ? $"0x{address.Value:X}" : "0" };
+            }
+            catch (Exception ex)
+            {
+                return new { success = false, error = ex.Message };
+            }
+        }
+
+        private static bool TryParseAddress(string address, out ulong result) =>
+            ulong.TryParse(address.Replace("0x", "").Replace("0X", ""),
+                System.Globalization.NumberStyles.HexNumber, null, out result);
     }
 }

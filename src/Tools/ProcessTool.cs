@@ -6,10 +6,15 @@ using ModelContextProtocol.Server;
 
 namespace Tools
 {
+    /// <summary>
+    /// Process and thread management tools.
+    /// </summary>
     [McpServerToolType]
     public class ProcessTool
     {
         private ProcessTool() { }
+
+
 
         [McpServerTool(Name = "get_process_list"), Description("Get the list of all running processes")]
         public static object GetProcessList()
@@ -68,34 +73,5 @@ namespace Tools
             }
         }
 
-        [McpServerTool(Name = "get_current_process"), Description("Get the currently attached process ID and status")]
-        public static object GetCurrentProcess()
-        {
-            try
-            {
-                int processId = Process.GetOpenedProcessID();
-
-                if (processId == 0)
-                    return new { success = true, processId = 0, isOpen = false, processName = "" };
-
-                string processName = "Unknown";
-                try
-                {
-                    var processDict = Process.GetProcessList();
-                    if (processDict.TryGetValue(processId, out var name))
-                        processName = name;
-                }
-                catch
-                {
-                    // If process list fails, just return "Unknown"
-                }
-
-                return new { success = true, processId, isOpen = true, processName };
-            }
-            catch (Exception ex)
-            {
-                return new { success = false, error = ex.Message };
-            }
-        }
     }
 }

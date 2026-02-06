@@ -38,15 +38,12 @@ namespace CEMCP
             .WithHttpTransport()
             .WithTools<Tools.ProcessTool>()
             .WithTools<Tools.LuaExecutionTool>()
-            .WithTools<Tools.MemoryReadTool>()
-            .WithTools<Tools.MemoryWriteTool>()
-            .WithTools<Tools.AobScanTool>()
-            .WithTools<Tools.DisassembleTool>()
-            .WithTools<Tools.AddressTool>()
+            .WithTools<Tools.MemoryTool>()
+            .WithTools<Tools.ScanTool>()
+            .WithTools<Tools.AssemblyTool>()
             .WithTools<Tools.ConversionTool>()
-            .WithTools<Tools.ThreadListTool>()
-            .WithTools<Tools.MemScanTool>()
-            .WithTools<Tools.AddressListTool>();
+            .WithTools<Tools.AddressListTool>()
+            .WithResources<Resources.ProcessResources>();
 
             builder.Logging.ClearProviders(); // Disable logging
             builder.WebHost.UseUrls(baseUrl);

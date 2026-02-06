@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using CESDK.Classes;
 using ModelContextProtocol.Server;
+using static CESDK.CESDK;
 
 namespace Tools
 {
@@ -16,7 +17,7 @@ namespace Tools
         {
             try
             {
-                var records = CESDK.CESDK.Synchronize(() =>
+                var records = Synchronize(() =>
                 {
                     var al = new AddressList();
                     var result = new List<object>();
@@ -53,7 +54,7 @@ namespace Tools
         {
             try
             {
-                var record = CESDK.CESDK.Synchronize(() =>
+                var record = Synchronize(() =>
                 {
                     var al = new AddressList();
                     var r = al.CreateMemoryRecord();
@@ -92,7 +93,7 @@ namespace Tools
         {
             try
             {
-                var result = CESDK.CESDK.Synchronize(() =>
+                var result = Synchronize(() =>
                 {
                     var al = new AddressList();
                     var r = FindRecord(al, id, index, description);
@@ -140,7 +141,7 @@ namespace Tools
         {
             try
             {
-                var found = CESDK.CESDK.Synchronize(() =>
+                var found = Synchronize(() =>
                 {
                     var al = new AddressList();
                     var r = FindRecord(al, id, index, description);
@@ -167,7 +168,7 @@ namespace Tools
         {
             try
             {
-                CESDK.CESDK.Synchronize(() =>
+                Synchronize(() =>
                 {
                     var al = new AddressList();
                     al.Clear();

@@ -1,6 +1,6 @@
 using System;
 using System.ComponentModel;
-using CESDK;
+using CESDK.Classes;
 using ModelContextProtocol.Server;
 
 namespace Tools
@@ -10,50 +10,34 @@ namespace Tools
     {
         private LuaExecutionTool() { }
 
-        [McpServerTool(Name = "execute_lua"), Description("Execute a Lua script in Cheat Engine and return the result")]
+        [McpServerTool(Name = "execute_lua"), Description(
+            "Execute a Lua script in Cheat Engine's Lua environment and return the result. " +
+            "Supports all CE Lua API functions. Returns are automatically serialized including tables. " +
+            "Use 'return <value>' to get values back. Multiple return values are supported. " +
+            "IMPORTANT: Prefer using dedicated non-script tools (e.g. memory_scan, aob_scan, open_process, " +
+            "read_memory, write_memory, add_memory_record, etc.) when they can accomplish the task. " +
+            "Only use this Lua execution tool when no other available tool can perform the required action.")]
         public static object ExecuteLua(
-            [Description("The Lua code to execute")] string script)
+            [Description("The Lua code to execute. Use 'return' to get values back.")] string script)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(script))
                     return new { success = false, error = "Script parameter is required" };
 
-                var lua = PluginContext.Lua;
-                var initialStackSize = lua.GetTop();
+                var result = LuaExecutor.Execute(script);
 
-                lua.DoString(script);
+                if (!result.HasValue)
+                    return new { success = true, result = (object?)null, message = "Executed successfully (no return value)" };
 
-                var finalStackSize = lua.GetTop();
-                var returnCount = finalStackSize - initialStackSize;
+                if (result.ReturnCount == 1)
+                    return new { success = true, result = result.Value };
 
-                string result;
-
-                if (returnCount > 0)
-                {
-                    if (lua.IsString(-1))
-                        result = lua.ToString(-1);
-                    else if (lua.IsNumber(-1))
-                        result = lua.ToNumber(-1).ToString();
-                    else if (lua.IsBoolean(-1))
-                        result = lua.ToBoolean(-1).ToString();
-                    else if (lua.IsNil(-1))
-                        result = "nil";
-                    else
-                        result = $"[{lua.Type(-1)}]";
-
-                    lua.Pop(returnCount);
-                }
-                else
-                {
-                    result = "Lua code executed successfully (no return value)";
-                }
-
-                return new { success = true, result };
+                return new { success = true, results = result.Values };
             }
             catch (Exception ex)
             {
-                return new { success = false, error = $"Lua execution failed: {ex.Message}" };
+                return new { success = false, error = ex.Message };
             }
         }
     }
