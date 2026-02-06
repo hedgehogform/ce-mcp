@@ -11,29 +11,59 @@ A Model Context Protocol (MCP) server plugin for Cheat Engine that provides acce
 
 ## Architecture
 
-This project exposes Cheat Engine functionality through a REST API server built with ASP.NET Core.
+This project exposes Cheat Engine functionality as MCP tools over SSE (Server-Sent Events) using the official [Model Context Protocol C# SDK](https://github.com/modelcontextprotocol/csharp-sdk).
 
-- **REST API Server**: Runs on `http://localhost:6300` with OpenAPI documentation at `/scalar/v1`
-- **17+ API Endpoints**: Lua execution, process management, memory operations, AOB scanning, disassembly, and more
+- **MCP SSE Server**: Runs on `http://localhost:6300` with SSE transport at `/sse`
+- **11 MCP Tool Classes**: Lua execution, process management, memory read/write, AOB scanning, disassembly, memory scanning, address list management, and more
 - **Single DLL Plugin**: All dependencies embedded - just drop into Cheat Engine plugins folder
-
-## Related Projects
-
-- **Python MCP Client**: [hedgehogform/ce-mcp-client](https://github.com/hedgehogform/ce-mcp-client) - Wraps the REST API with MCP STDIO for AI clients like Claude Desktop
-
-<!-- ## Current Features
-
-- Execute Lua code in Cheat Engine
-- Get list of running processes -->
+- **Direct MCP Integration**: Connect AI clients (Claude Desktop, VS Code Copilot, etc.) directly — no bridge client needed
 
 ## Requirements
 
 - **Cheat Engine 7.6.2+** (minimum version with .NET Core plugin support)
-- .NET 9.0 SDK
+- .NET 10.0 SDK
+- **ASP.NET Core 10.0 Runtime** (`Microsoft.AspNetCore.App 10.0.x`)
 - Windows OS (I don't have a mac but if you can run it then open an issue and let me know.)
 
 > [!IMPORTANT]
 > Cheat Engine 7.6.2 or newer is required. Older versions do not support .NET Core plugins.
+
+> [!IMPORTANT]
+> Cheat Engine ships with a `ce.runtimeconfig.json` targeting .NET 9.0. You **must** update it to .NET 10.0 for the MCP plugin to work.
+> 
+> Edit `ce.runtimeconfig.json` in your Cheat Engine installation directory and replace it with:
+> ```json
+> {
+>   "runtimeOptions": {
+>     "tfm": "net10.0",
+>     "frameworks": [
+>       {
+>         "name": "Microsoft.NETCore.App",
+>         "version": "10.0.0",
+>         "rollForward": "latestMinor"
+>       },
+>       {
+>         "name": "Microsoft.WindowsDesktop.App",
+>         "version": "10.0.0",
+>         "rollForward": "latestMinor"
+>       },
+>       {
+>         "name": "Microsoft.AspNetCore.App",
+>         "version": "10.0.0",
+>         "rollForward": "latestMinor"
+>       }
+>     ]    
+>   }
+> }
+> ```
+
+> [!NOTE]
+> If you get `Failure executing CESDK.CESDK:CEPluginInitialize (Result=80070002)`, you are missing the .NET 10.0 runtimes. Install them with:
+> ```
+> winget install Microsoft.DotNet.DesktopRuntime.10
+> winget install Microsoft.DotNet.AspNetCore.10
+> ```
+> Or download from https://dotnet.microsoft.com/download/dotnet/10.0
 
 ## Installation
 
@@ -65,26 +95,23 @@ dotnet build -c Release
 
 **Note**: If you encounter a `FodyCommon.dll` access denied error during restore/build, close your IDE and restart it to release the file lock.
 
-### Python MCP Client
-
-```bash
-# Navigate to mcp-client directory
-cd mcp-client
-
-# Install dependencies
-uv sync
-
-# Open cheat_engine_mcp_server.py in your AI software.
-```
-
 ### Testing
 
 1. Build the plugin and copy to Cheat Engine plugins directory
 2. Start Cheat Engine and enable the plugin
 3. Use "MCP" menu to start the server
-4. Access the REST API at `http://localhost:6300` or view documentation at `http://localhost:6300/scalar/v1`
-5. For AI integration, use [ce-mcp-client](https://github.com/hedgehogform/ce-mcp-client) to connect Claude Desktop or other MCP clients
+4. Connect your MCP client to `http://localhost:6300/sse`
 
-### Available API Endpoints
+### MCP Client Configuration
 
-For complete API documentation with interactive examples, visit `http://localhost:6300/scalar/v1` after starting the server.
+Add the following to your MCP client configuration (e.g. Claude Desktop `claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "cheat-engine": {
+      "url": "http://localhost:6300/sse"
+    }
+  }
+}
+```

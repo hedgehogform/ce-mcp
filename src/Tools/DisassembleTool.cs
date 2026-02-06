@@ -1,64 +1,41 @@
 using System;
+using System.ComponentModel;
 using CESDK.Classes;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
+using ModelContextProtocol.Server;
 
 namespace Tools
 {
-    public static class DisassembleTool
+    [McpServerToolType]
+    public class DisassembleTool
     {
-        /// <summary>
-        /// Maps disassemble API endpoints
-        /// </summary>
-        public static void MapDisassembleApi(this WebApplication app)
+        private DisassembleTool() { }
+
+        [McpServerTool(Name = "disassemble"), Description("Disassemble instructions or get instruction size at a memory address")]
+        public static object Disassemble(
+            [Description("Memory address as hex string (e.g. '0x1234ABCD')")] string address,
+            [Description("Request type: 'disassemble' or 'get-instruction-size' (default: disassemble)")] string? requestType = null)
         {
-            // POST /api/disassemble - Disassemble instructions at address
-            app.MapPost("/api/disassemble", (DisassembleRequest request) =>
-            {
-                try
-                {
-                    var result = Disassemble(request.Address ?? "", request.RequestType);
-                    return Results.Ok(new { success = true, result });
-                }
-                catch (Exception ex)
-                {
-                    return Results.Ok(new { success = false, error = ex.Message });
-                }
-            })
-            .WithName("Disassemble")
-            .WithDescription("Disassemble instructions or get instruction size at a memory address")
-            .WithOpenApi();
-        }
-
-        /// <summary>
-        /// Disassembles instructions or gets instruction size at a memory address.
-        /// </summary>
-        /// <param name="addressString">Memory address as hex string, e.g., "0x1234ABCD"</param>
-        /// <param name="requestType">Optional: "disassemble" or "get-instruction-size"</param>
-        /// <returns>Disassembly result or instruction size as string</returns>
-        private static string Disassemble(string addressString, string? requestType = null)
-        {
-            if (string.IsNullOrWhiteSpace(addressString))
-                throw new ArgumentException("Address parameter is required.", nameof(addressString));
-
-            if (!ulong.TryParse(addressString.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
-                throw new FormatException("Invalid address format.");
-
             try
             {
-                return requestType?.ToLower() switch
+                if (string.IsNullOrWhiteSpace(address))
+                    return new { success = false, error = "Address parameter is required" };
+
+                if (!ulong.TryParse(address.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong addr))
+                    return new { success = false, error = "Invalid address format" };
+
+                string result = requestType?.ToLower() switch
                 {
-                    "get-instruction-size" => Disassembler.GetInstructionSize(address).ToString(),
-                    "disassemble" or null or "" => Disassembler.Disassemble(address)?.ToString() ?? "Failed to disassemble",
+                    "get-instruction-size" => Disassembler.GetInstructionSize(addr).ToString(),
+                    "disassemble" or null or "" => Disassembler.Disassemble(addr)?.ToString() ?? "Failed to disassemble",
                     _ => throw new NotSupportedException($"Unsupported request type: {requestType}")
                 };
+
+                return new { success = true, result };
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Disassembly failed: {ex.Message}", ex);
+                return new { success = false, error = ex.Message };
             }
         }
     }
-
-    public record DisassembleRequest(string? Address, string? RequestType = null);
 }

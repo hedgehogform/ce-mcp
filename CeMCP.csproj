@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>ce-mcp</AssemblyName>
     <RootNamespace>CEMCP</RootNamespace>
@@ -22,14 +22,14 @@
     <!-- Generate runtime config to help find framework assemblies -->
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
 
-    <!-- Force .NET 9.0.10 to match NuGet package versions -->
-    <RuntimeFrameworkVersion>9.0.10</RuntimeFrameworkVersion>
-
     <!-- WPF -->
     <UseWPF>true</UseWPF>
     <PlatformTarget>x64</PlatformTarget>
     <Platforms>x64</Platforms>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+
+    <!-- Allow roll-forward to find available ASP.NET Core runtime -->
+    <RollForward>Major</RollForward>
   </PropertyGroup>
 
   <ItemGroup>
@@ -37,8 +37,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.8.0-preview.1" />
   </ItemGroup>
 </Project>

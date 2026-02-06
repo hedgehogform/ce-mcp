@@ -58,7 +58,7 @@ namespace CEMCP.Models
 
         public string BaseUrl => $"http://{Host}:{Port}";
 
-        public string ScalarUrl => $"{BaseUrl}/scalar/v1";
+        public string SseUrl => $"{BaseUrl}/sse";
 
         public string StartStopButtonText => ServerStatus.Equals("running", System.StringComparison.CurrentCultureIgnoreCase) ? "Stop Server" : "Start Server";
 

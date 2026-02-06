@@ -14,7 +14,7 @@ namespace CEMCP
     public class McpPlugin : CheatEnginePlugin
     {
         private bool isServerRunning = false;
-        private ApiServer? mcpServer;
+        private McpSseServer? mcpServer;
         private Window? configWindow = null;
         private Thread? configThread = null;
 
@@ -33,6 +33,16 @@ namespace CEMCP
 
         protected override void OnEnable()
         {
+            // WPF's InitializeComponent uses Application.LoadComponent which resolves
+            // assemblies by name. Since CE loads this DLL via CLR hosting, the default
+            // resolver can't find it. Return the already-loaded assembly when asked.
+            AppDomain.CurrentDomain.AssemblyResolve += (_, args) =>
+            {
+                var thisAssembly = Assembly.GetExecutingAssembly();
+                var requestedName = new AssemblyName(args.Name);
+                return requestedName.Name == thisAssembly.GetName().Name ? thisAssembly : null;
+            };
+
             PluginContext.Lua.RegisterFunction("toggle_mcp_server", ToggleMCPServer);
             PluginContext.Lua.RegisterFunction("update_button_text", UpdateButtonText);
             PluginContext.Lua.RegisterFunction("show_mcp_config", ShowMCPConfig);
@@ -188,7 +198,7 @@ namespace CEMCP
             }
         }
 
-        public ApiServer? GetServerWrapper()
+        public McpSseServer? GetServerWrapper()
         {
             return mcpServer;
         }
@@ -209,13 +219,13 @@ namespace CEMCP
 
             try
             {
-                mcpServer = new ApiServer();
+                mcpServer = new McpSseServer();
                 ServerConfig.LoadFromFile();
                 ServerConfig.LoadFromEnvironment(); // Environment variables override config file
                 mcpServer.Start(ServerConfig.ConfigBaseUrl);
 
                 isServerRunning = true;
-                PluginContext.Lua.DoString($"print('Scalar API Started on: {ServerConfig.ConfigBaseUrl}')");
+                PluginContext.Lua.DoString($"print('MCP SSE Server started on: {ServerConfig.ConfigBaseUrl}')");
                 UpdateButtonText();
             }
             catch (Exception ex)
@@ -256,7 +266,7 @@ namespace CEMCP
             mcpServer?.Stop();
             mcpServer = null;
             isServerRunning = false;
-            PluginContext.Lua.DoString("print('Scalar API stopped')");
+            PluginContext.Lua.DoString("print('MCP SSE Server stopped')");
             UpdateButtonText();
         }
     }

@@ -1,71 +1,43 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using CESDK.Classes;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
+using ModelContextProtocol.Server;
 
 namespace Tools
 {
-    public static class AobScanTool
+    [McpServerToolType]
+    public class AobScanTool
     {
-        /// <summary>
-        /// Maps AOB scan API endpoints
-        /// </summary>
-        public static void MapAobScanApi(this WebApplication app)
-        {
-            // POST /api/aob/scan - Scan for Array of Bytes pattern
-            app.MapPost("/api/aob/scan", (AobScanRequest request) =>
-            {
-                try
-                {
-                    var addresses = AobScan(
-                        request.Pattern ?? "",
-                        request.ProtectionFlags,
-                        request.AlignmentType,
-                        request.AlignmentParam);
-                    return Results.Ok(new { success = true, addresses });
-                }
-                catch (Exception ex)
-                {
-                    return Results.Ok(new { success = false, error = ex.Message });
-                }
-            })
-            .WithName("AobScan")
-            .WithDescription("Scan memory for an Array of Bytes pattern")
-            .WithOpenApi();
-        }
+        private AobScanTool() { }
 
-        private static List<string> AobScan(
-            string aobString,
-            string? protectionFlags = null,
-            int? alignmentType = null,
-            string? alignmentParam = null)
+        [McpServerTool(Name = "aob_scan"), Description("Scan memory for an Array of Bytes pattern")]
+        public static object AobScan(
+            [Description("AOB pattern string (e.g. 'AA BB ?? CC DD')")] string pattern,
+            [Description("Memory protection flags filter")] string? protectionFlags = null,
+            [Description("Alignment type (0=none)")] int? alignmentType = null,
+            [Description("Alignment parameter")] string? alignmentParam = null)
         {
-            if (string.IsNullOrWhiteSpace(aobString))
-                throw new ArgumentException("AOB string is required.", nameof(aobString));
-
             try
             {
+                if (string.IsNullOrWhiteSpace(pattern))
+                    return new { success = false, error = "AOB pattern is required" };
+
                 var result = AOBScanner.Scan(
-                    aobString,
+                    pattern,
                     protectionFlags,
                     alignmentType ?? 0,
                     alignmentParam
                 );
 
-                return [.. result.Select(addr => $"0x{addr:X}")];
+                var addresses = result.Select(addr => $"0x{addr:X}").ToList();
+                return new { success = true, addresses };
             }
-            catch (AOBScanException ex)
+            catch (Exception ex)
             {
-                throw new InvalidOperationException($"AOB scan failed: {ex.Message}", ex);
+                return new { success = false, error = ex.Message };
             }
         }
     }
-
-    public record AobScanRequest(
-        string? Pattern,
-        string? ProtectionFlags = null,
-        int? AlignmentType = null,
-        string? AlignmentParam = null);
 }

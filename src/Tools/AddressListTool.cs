@@ -2,181 +2,182 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using CESDK.Classes;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
+using ModelContextProtocol.Server;
 
 namespace Tools
 {
-    public static class AddressListTool
+    [McpServerToolType]
+    public class AddressListTool
     {
-        public static void MapAddressListApi(this WebApplication app)
+        private AddressListTool() { }
+
+        [McpServerTool(Name = "get_address_list"), Description("Get all memory records in the cheat table")]
+        public static object GetAddressList()
         {
-            // GET /api/addresslist - Get all memory records
-            app.MapGet("/api/addresslist", () =>
+            try
             {
-                try
+                var records = CESDK.CESDK.Synchronize(() =>
                 {
-                    var records = CESDK.CESDK.Synchronize(() =>
+                    var al = new AddressList();
+                    var result = new List<object>();
+                    for (int i = 0; i < al.Count; i++)
                     {
-                        var al = new AddressList();
-                        var result = new List<object>();
-                        for (int i = 0; i < al.Count; i++)
-                        {
-                            var r = al.GetMemoryRecord(i);
-                            result.Add(new
-                            {
-                                id = r.ID,
-                                index = r.Index,
-                                description = r.Description,
-                                address = r.Address,
-                                value = r.Value,
-                                active = r.Active
-                            });
-                        }
-                        return result;
-                    });
-
-                    return Results.Ok(new { success = true, count = records.Count, records });
-                }
-                catch (Exception ex)
-                {
-                    return Results.Ok(new { success = false, error = ex.Message });
-                }
-            })
-            .WithName("GetAddressList")
-            .WithDescription("Get all memory records in the cheat table")
-            .WithOpenApi();
-
-            // POST /api/addresslist/add - Add a new memory record
-            app.MapPost("/api/addresslist/add", (AddRecordRequest request) =>
-            {
-                try
-                {
-                    var record = CESDK.CESDK.Synchronize(() =>
-                    {
-                        var al = new AddressList();
-                        var r = al.CreateMemoryRecord();
-                        r.Description = request.Description;
-                        r.Address = request.Address;
-                        r.VarType = request.VarType;
-                        r.Value = request.Value;
-                        return new
+                        var r = al.GetMemoryRecord(i);
+                        result.Add(new
                         {
                             id = r.ID,
-                            description = r.Description,
-                            address = r.Address,
-                            value = r.Value
-                        };
-                    });
-
-                    return Results.Ok(new { success = true, record });
-                }
-                catch (Exception ex)
-                {
-                    return Results.Ok(new { success = false, error = ex.Message });
-                }
-            })
-            .WithName("AddMemoryRecord")
-            .WithDescription("Add a new memory record to the cheat table")
-            .WithOpenApi();
-
-            // POST /api/addresslist/update - Update a memory record
-            app.MapPost("/api/addresslist/update", (UpdateRecordRequest request) =>
-            {
-                try
-                {
-                    var result = CESDK.CESDK.Synchronize(() =>
-                    {
-                        var al = new AddressList();
-                        var r = FindRecord(al, request.Id, request.Index, request.Description);
-                        if (r == null)
-                            return (object?)null;
-
-                        if (!string.IsNullOrEmpty(request.NewDescription))
-                            r.Description = request.NewDescription;
-                        if (!string.IsNullOrEmpty(request.NewAddress))
-                            r.Address = request.NewAddress;
-                        if (request.NewVarType.HasValue)
-                            r.VarType = request.NewVarType.Value;
-                        if (!string.IsNullOrEmpty(request.NewValue))
-                            r.Value = request.NewValue;
-                        if (request.Active.HasValue)
-                            r.Active = request.Active.Value;
-
-                        return new
-                        {
-                            id = r.ID,
+                            index = r.Index,
                             description = r.Description,
                             address = r.Address,
                             value = r.Value,
                             active = r.Active
-                        };
-                    });
+                        });
+                    }
+                    return result;
+                });
 
-                    if (result == null)
-                        return Results.Ok(new { success = false, error = "Record not found" });
-
-                    return Results.Ok(new { success = true, record = result });
-                }
-                catch (Exception ex)
-                {
-                    return Results.Ok(new { success = false, error = ex.Message });
-                }
-            })
-            .WithName("UpdateMemoryRecord")
-            .WithDescription("Update a memory record (find by id, index, or description)")
-            .WithOpenApi();
-
-            // POST /api/addresslist/delete - Delete a memory record
-            app.MapPost("/api/addresslist/delete", (DeleteRecordRequest request) =>
+                return new { success = true, count = records.Count, records };
+            }
+            catch (Exception ex)
             {
-                try
-                {
-                    var found = CESDK.CESDK.Synchronize(() =>
-                    {
-                        var al = new AddressList();
-                        var r = FindRecord(al, request.Id, request.Index, request.Description);
-                        if (r == null)
-                            return false;
+                return new { success = false, error = ex.Message };
+            }
+        }
 
-                        al.DeleteMemoryRecord(r);
-                        return true;
-                    });
-
-                    if (!found)
-                        return Results.Ok(new { success = false, error = "Record not found" });
-
-                    return Results.Ok(new { success = true });
-                }
-                catch (Exception ex)
-                {
-                    return Results.Ok(new { success = false, error = ex.Message });
-                }
-            })
-            .WithName("DeleteMemoryRecord")
-            .WithDescription("Delete a memory record (find by id, index, or description)")
-            .WithOpenApi();
-
-            // POST /api/addresslist/clear - Clear all records
-            app.MapPost("/api/addresslist/clear", () =>
+        [McpServerTool(Name = "add_memory_record"), Description("Add a new memory record to the cheat table")]
+        public static object AddMemoryRecord(
+            [Description("Description for the memory record")] string description = "New Entry",
+            [Description("Memory address")] string address = "0",
+            [Description("Variable type (e.g. vtDword, vtFloat, etc.)")] VariableType varType = VariableType.vtDword,
+            [Description("Initial value")] string value = "0")
+        {
+            try
             {
-                try
+                var record = CESDK.CESDK.Synchronize(() =>
                 {
-                    CESDK.CESDK.Synchronize(() =>
+                    var al = new AddressList();
+                    var r = al.CreateMemoryRecord();
+                    r.Description = description;
+                    r.Address = address;
+                    r.VarType = varType;
+                    r.Value = value;
+                    return new
                     {
-                        var al = new AddressList();
-                        al.Clear();
-                    });
-                    return Results.Ok(new { success = true });
-                }
-                catch (Exception ex)
+                        id = r.ID,
+                        description = r.Description,
+                        address = r.Address,
+                        value = r.Value
+                    };
+                });
+
+                return new { success = true, record };
+            }
+            catch (Exception ex)
+            {
+                return new { success = false, error = ex.Message };
+            }
+        }
+
+#pragma warning disable S107 // Methods should not have too many parameters
+        [McpServerTool(Name = "update_memory_record"), Description("Update a memory record (find by id, index, or description)")]
+        public static object UpdateMemoryRecord(
+            [Description("Record ID to find")] int? id = null,
+            [Description("Record index to find")] int? index = null,
+            [Description("Record description to find")] string? description = null,
+            [Description("New description")] string? newDescription = null,
+            [Description("New address")] string? newAddress = null,
+            [Description("New variable type")] VariableType? newVarType = null,
+            [Description("New value")] string? newValue = null,
+            [Description("Set active state")] bool? active = null)
+        {
+            try
+            {
+                var result = CESDK.CESDK.Synchronize(() =>
                 {
-                    return Results.Ok(new { success = false, error = ex.Message });
-                }
-            })
-            .WithName("ClearAddressList")
-            .WithDescription("Clear all memory records from the cheat table")
-            .WithOpenApi();
+                    var al = new AddressList();
+                    var r = FindRecord(al, id, index, description);
+                    if (r == null)
+                        return (object?)null;
+
+                    if (!string.IsNullOrEmpty(newDescription))
+                        r.Description = newDescription;
+                    if (!string.IsNullOrEmpty(newAddress))
+                        r.Address = newAddress;
+                    if (newVarType.HasValue)
+                        r.VarType = newVarType.Value;
+                    if (!string.IsNullOrEmpty(newValue))
+                        r.Value = newValue;
+                    if (active.HasValue)
+                        r.Active = active.Value;
+
+                    return new
+                    {
+                        id = r.ID,
+                        description = r.Description,
+                        address = r.Address,
+                        value = r.Value,
+                        active = r.Active
+                    };
+                });
+
+                if (result == null)
+                    return new { success = false, error = "Record not found" };
+
+                return new { success = true, record = result };
+            }
+            catch (Exception ex)
+            {
+                return new { success = false, error = ex.Message };
+            }
+        }
+#pragma warning restore S107
+
+        [McpServerTool(Name = "delete_memory_record"), Description("Delete a memory record (find by id, index, or description)")]
+        public static object DeleteMemoryRecord(
+            [Description("Record ID to find")] int? id = null,
+            [Description("Record index to find")] int? index = null,
+            [Description("Record description to find")] string? description = null)
+        {
+            try
+            {
+                var found = CESDK.CESDK.Synchronize(() =>
+                {
+                    var al = new AddressList();
+                    var r = FindRecord(al, id, index, description);
+                    if (r == null)
+                        return false;
+
+                    al.DeleteMemoryRecord(r);
+                    return true;
+                });
+
+                if (!found)
+                    return new { success = false, error = "Record not found" };
+
+                return new { success = true };
+            }
+            catch (Exception ex)
+            {
+                return new { success = false, error = ex.Message };
+            }
+        }
+
+        [McpServerTool(Name = "clear_address_list"), Description("Clear all memory records from the cheat table")]
+        public static object ClearAddressList()
+        {
+            try
+            {
+                CESDK.CESDK.Synchronize(() =>
+                {
+                    var al = new AddressList();
+                    al.Clear();
+                });
+                return new { success = true };
+            }
+            catch (Exception ex)
+            {
+                return new { success = false, error = ex.Message };
+            }
         }
 
         private static MemoryRecord? FindRecord(AddressList al, int? id, int? index, string? description)
@@ -191,55 +192,4 @@ namespace Tools
             throw new ArgumentException("Provide id, index, or description to find the record");
         }
     }
-
-    public record AddRecordRequest(
-        [property: DefaultValue("New Entry")]
-        string Description = "New Entry",
-
-        [property: DefaultValue("0")]
-        string Address = "0",
-
-        [property: DefaultValue(VariableType.vtDword)]
-        VariableType VarType = VariableType.vtDword,
-
-        [property: DefaultValue("0")]
-        string Value = "0"
-    );
-
-    public record UpdateRecordRequest(
-        [property: DefaultValue(null)]
-        int? Id = null,
-
-        [property: DefaultValue(null)]
-        int? Index = null,
-
-        [property: DefaultValue(null)]
-        string? Description = null,
-
-        [property: DefaultValue(null)]
-        string? NewDescription = null,
-
-        [property: DefaultValue(null)]
-        string? NewAddress = null,
-
-        [property: DefaultValue(null)]
-        VariableType? NewVarType = null,
-
-        [property: DefaultValue(null)]
-        string? NewValue = null,
-
-        [property: DefaultValue(null)]
-        bool? Active = null
-    );
-
-    public record DeleteRecordRequest(
-        [property: DefaultValue(null)]
-        int? Id = null,
-
-        [property: DefaultValue(null)]
-        int? Index = null,
-
-        [property: DefaultValue(null)]
-        string? Description = null
-    );
 }

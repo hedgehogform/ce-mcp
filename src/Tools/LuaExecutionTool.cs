@@ -1,54 +1,29 @@
 using System;
+using System.ComponentModel;
 using CESDK;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
+using ModelContextProtocol.Server;
 
 namespace Tools
 {
-    public static class LuaExecutionTool
+    [McpServerToolType]
+    public class LuaExecutionTool
     {
-        /// <summary>
-        /// Maps Lua execution API endpoints
-        /// </summary>
-        public static void MapLuaApi(this WebApplication app)
-        {
-            // POST /api/lua/execute - Execute Lua code
-            app.MapPost("/api/lua/execute", (LuaExecuteRequest request) =>
-            {
-                try
-                {
-                    var result = ExecuteLua(request.Script ?? "");
-                    return Results.Ok(new { success = true, result });
-                }
-                catch (Exception ex)
-                {
-                    return Results.Ok(new { success = false, error = ex.Message });
-                }
-            })
-            .WithName("ExecuteLua")
-            .WithDescription("Execute a Lua script in Cheat Engine")
-            .WithOpenApi();
-        }
+        private LuaExecutionTool() { }
 
-        /// <summary>
-        /// Executes Lua code and returns the top return value as a string (if any).
-        /// </summary>
-        /// <param name="code">The Lua code to execute</param>
-        /// <returns>Result of the Lua execution</returns>
-        private static string ExecuteLua(string code)
+        [McpServerTool(Name = "execute_lua"), Description("Execute a Lua script in Cheat Engine and return the result")]
+        public static object ExecuteLua(
+            [Description("The Lua code to execute")] string script)
         {
-            if (string.IsNullOrWhiteSpace(code))
-                throw new ArgumentException("Code parameter is required.", nameof(code));
-
             try
             {
+                if (string.IsNullOrWhiteSpace(script))
+                    return new { success = false, error = "Script parameter is required" };
+
                 var lua = PluginContext.Lua;
                 var initialStackSize = lua.GetTop();
 
-                // Execute the Lua code
-                lua.DoString(code);
+                lua.DoString(script);
 
-                // Determine how many return values were left on the stack
                 var finalStackSize = lua.GetTop();
                 var returnCount = finalStackSize - initialStackSize;
 
@@ -67,7 +42,6 @@ namespace Tools
                     else
                         result = $"[{lua.Type(-1)}]";
 
-                    // Clean up the stack
                     lua.Pop(returnCount);
                 }
                 else
@@ -75,14 +49,12 @@ namespace Tools
                     result = "Lua code executed successfully (no return value)";
                 }
 
-                return result;
+                return new { success = true, result };
             }
-            catch (InvalidOperationException e)
+            catch (Exception ex)
             {
-                throw new InvalidOperationException($"Lua execution failed: {e.Message}", e);
+                return new { success = false, error = $"Lua execution failed: {ex.Message}" };
             }
         }
     }
-
-    public record LuaExecuteRequest(string? Script);
 }

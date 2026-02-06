@@ -1,97 +1,59 @@
 using System;
+using System.ComponentModel;
 using CESDK.Classes;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
+using ModelContextProtocol.Server;
 
 namespace Tools
 {
-    public static class MemoryReadTool
+    [McpServerToolType]
+    public class MemoryReadTool
     {
-        /// <summary>
-        /// Maps memory read API endpoints
-        /// </summary>
-        public static void MapMemoryReadApi(this WebApplication app)
+        private MemoryReadTool() { }
+
+        [McpServerTool(Name = "read_memory"), Description("Read memory at the given address with the specified data type")]
+        public static object ReadMemory(
+            [Description("Memory address as a hex string (e.g. '0x1234ABCD')")] string address,
+            [Description("Data type: 'bytes', 'int32', 'int64', 'float', 'string'")] string dataType,
+            [Description("Number of bytes to read (required for 'bytes' type)")] int? byteCount = null,
+            [Description("Max length for strings (required for 'string' type)")] int? maxLength = null,
+            [Description("Whether string is wide char (UTF-16)")] bool wideChar = false)
         {
-            // POST /api/memory/read - Read memory at address
-            app.MapPost("/api/memory/read", (MemoryReadRequest request) =>
-            {
-                try
-                {
-                    var value = ReadMemory(
-                        request.Address ?? "",
-                        request.DataType ?? "",
-                        request.ByteCount,
-                        request.MaxLength,
-                        request.WideChar ?? false);
-                    return Results.Ok(new { success = true, value });
-                }
-                catch (Exception ex)
-                {
-                    return Results.Ok(new { success = false, error = ex.Message });
-                }
-            })
-            .WithName("ReadMemory")
-            .WithDescription("Read memory at the given address with the specified data type")
-            .WithOpenApi();
-        }
-
-        /// <summary>
-        /// Reads memory at the given address with the specified data type.
-        /// </summary>
-        /// <param name="addressString">Memory address as a hex string (e.g., "0x1234ABCD")</param>
-        /// <param name="dataType">Data type: "bytes", "int32", "int64", "float", "string"</param>
-        /// <param name="byteCount">Number of bytes to read (required for "bytes")</param>
-        /// <param name="maxLength">Max length for strings (required for "string")</param>
-        /// <param name="wideChar">Whether string is wide char (UTF-16)</param>
-        /// <returns>Read value as object</returns>
-        private static object ReadMemory(
-            string addressString,
-            string dataType,
-            int? byteCount = null,
-            int? maxLength = null,
-            bool wideChar = false)
-        {
-            if (string.IsNullOrWhiteSpace(addressString))
-                throw new ArgumentException("Address parameter is required.", nameof(addressString));
-
-            if (string.IsNullOrWhiteSpace(dataType))
-                throw new ArgumentException("DataType parameter is required.", nameof(dataType));
-
-            if (!ulong.TryParse(addressString.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong address))
-                throw new FormatException("Invalid address format.");
-
             try
             {
-                return dataType.ToLower() switch
+                if (string.IsNullOrWhiteSpace(address))
+                    return new { success = false, error = "Address parameter is required" };
+
+                if (string.IsNullOrWhiteSpace(dataType))
+                    return new { success = false, error = "DataType parameter is required" };
+
+                if (!ulong.TryParse(address.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong addr))
+                    return new { success = false, error = "Invalid address format" };
+
+                object value = dataType.ToLower() switch
                 {
                     "bytes" => byteCount.HasValue && byteCount.Value > 0
-                        ? MemoryAccess.ReadBytes(address, byteCount.Value)
-                        : throw new ArgumentException("ByteCount parameter is required for bytes and must be greater than 0.", nameof(byteCount)),
+                        ? MemoryAccess.ReadBytes(addr, byteCount.Value)
+                        : throw new ArgumentException("ByteCount is required for bytes and must be > 0"),
 
-                    "integer" or "int32" or "int" => MemoryAccess.ReadInteger(address),
+                    "integer" or "int32" or "int" => MemoryAccess.ReadInteger(addr),
 
-                    "qword" or "int64" or "long" => MemoryAccess.ReadQword(address),
+                    "qword" or "int64" or "long" => MemoryAccess.ReadQword(addr),
 
-                    "float" => MemoryAccess.ReadFloat(address),
+                    "float" => MemoryAccess.ReadFloat(addr),
 
                     "string" => maxLength.HasValue && maxLength.Value > 0
-                        ? MemoryAccess.ReadString(address, maxLength.Value, wideChar)
-                        : throw new ArgumentException("MaxLength parameter is required for string and must be greater than 0.", nameof(maxLength)),
+                        ? MemoryAccess.ReadString(addr, maxLength.Value, wideChar)
+                        : throw new ArgumentException("MaxLength is required for string and must be > 0"),
 
                     _ => throw new NotSupportedException($"Unsupported data type: {dataType}")
                 };
+
+                return new { success = true, value };
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Memory read failed: {ex.Message}", ex);
+                return new { success = false, error = ex.Message };
             }
         }
     }
-
-    public record MemoryReadRequest(
-        string? Address,
-        string? DataType,
-        int? ByteCount = null,
-        int? MaxLength = null,
-        bool? WideChar = false);
 }
