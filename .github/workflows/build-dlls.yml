@@ -1,0 +1,46 @@
+name: Build DLLs
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+    workflow_dispatch:
+
+jobs:
+    build:
+        runs-on: windows-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: "10.0.x"
+
+            - name: Restore dependencies
+              run: dotnet restore
+
+            - name: Build Debug
+              run: dotnet build -c Debug --no-restore
+
+            - name: Build Release
+              run: dotnet build -c Release --no-restore
+
+            - name: Upload Debug DLL
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ce-mcp-debug
+                  path: bin/x64/Debug/net10.0-windows/ce-mcp.dll
+                  if-no-files-found: error
+
+            - name: Upload Release DLL
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ce-mcp-release
+                  path: bin/x64/Release/net10.0-windows/ce-mcp.dll
+                  if-no-files-found: error
