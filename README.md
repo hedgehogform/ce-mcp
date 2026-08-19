@@ -1,33 +1,39 @@
 # Cheat Engine MCP Server
 
-> [!WARNING]
-> This project is not feature complete and is under development.
->
-> Things might break while features are added.
-
-A Model Context Protocol (MCP) server plugin for Cheat Engine that provides access to Cheat Engine functionality.
+`ce-mcp` is an x64 Cheat Engine plugin that exposes Cheat Engine workflows as a stateless Model Context Protocol server over Streamable HTTP. It builds as one `ce-mcp.dll` with managed dependencies embedded and includes a distributable AI skill beside the DLL.
 
 [![FOSSA](https://app.fossa.com/api/projects/git%2Bgithub.com%2FShadowNineX%2Fce-mcp.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2FShadowNineX%2Fce-mcp?ref=badge_large&issueType=license)
 
-## Architecture
+> [!WARNING]
+> This project is under active development. Memory writes, process control, file operations, injection, compilation, debugger actions, DBVM, Auto Assembler, and arbitrary Lua can alter or crash a target or host. Use a disposable process while testing.
 
-This project exposes Cheat Engine functionality as MCP tools over Streamable HTTP using the official [Model Context Protocol C# SDK](https://github.com/modelcontextprotocol/csharp-sdk).
+## Capabilities
 
-- **MCP Server**: Runs on `http://localhost:6300` with Streamable HTTP transport at `/`
-- **20 MCP Tool Classes**: process control, memory and pointer workflows, scans, symbols/RTTI, Structure Dissect, cheat tables, disassembly/analysis, injection, debugger, optional DBVM, address-list, conversion, and Lua operations
-- **Single DLL Plugin Artifact**: NuGet dependencies are embedded into `ce-mcp.dll`; .NET shared runtimes still need to be installed on the machine
-- **Distributable AI Skill**: Release bundles include `skills/ce-mcp/` beside the DLL for AI clients that consume repo skills
-- **Direct MCP Integration**: Connect AI clients (Claude Desktop, VS Code Copilot, etc.) directly — no bridge client needed
+| Area | Examples |
+| --- | --- |
+| Processes | List/open/create processes, pause/resume, inspect threads and state |
+| Memory | Typed reads/writes, regions, protection, allocation, copy/compare, hashes, dump/load |
+| Pointers and scans | Pointer chains, direct-reference scans, AOB, string, first/next value scans |
+| Symbols and structures | Modules, symbols, RTTI, registered symbols, Structure Dissect CRUD and comparison |
+| Code | Assembly, disassembly, bounded analysis, Auto Assembler, target C compilation |
+| Cheat tables | Address-list records and `.CT` load/save |
+| Debugger | Interfaces, breakpoints, hit tracking, threads, registers, XMM, stepping, stack traces, LBR |
+| Injection and execution | Script generation, native/.NET injection, remote function calls |
+| Optional DBVM | Availability, physical-memory access, and watches |
+| Lua and conversion | Structured Lua execution, MD5, ANSI/UTF-8 conversion |
 
-## Requirements
+The maintained tool inventory, enum values, and recommended workflows are in [`skills/ce-mcp/references/tool-catalog.md`](skills/ce-mcp/references/tool-catalog.md). Prefer the live MCP schemas for exact parameter names and defaults.
 
-- **Cheat Engine 7.6.2+** (minimum version with .NET Core plugin support)
-- **.NET 10 SDK** for building
-- **.NET 10 Desktop Runtime** (`Microsoft.WindowsDesktop.App 10.0.x`) for WPF/plugin UI support
-- **ASP.NET Core 10 Runtime** (`Microsoft.AspNetCore.App 10.0.x`) for the MCP HTTP server
-- Windows OS (I don't have a mac but if you can run it then open an issue and let me know.)
+## Quick Start
 
-For Windows installs, Microsoft publishes these WinGet package IDs:
+### 1. Install prerequisites
+
+- Windows x64.
+- Cheat Engine 7.6.2 or newer.
+- [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+- [ASP.NET Core 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+
+For development, also install the .NET 10 SDK:
 
 ```powershell
 winget install Microsoft.DotNet.SDK.10
@@ -35,168 +41,228 @@ winget install Microsoft.DotNet.DesktopRuntime.10
 winget install Microsoft.DotNet.AspNetCore.10
 ```
 
-> [!IMPORTANT]
-> Cheat Engine 7.6.2 or newer is required. Older versions do not support .NET Core plugins.
+### 2. Get the plugin
 
-> [!IMPORTANT]
-> Check `ce.runtimeconfig.json` in your Cheat Engine install directory. Some Cheat Engine 7.6.x installs target .NET 9.0 by default; this plugin targets .NET 10.0.
-> 
-> If your file targets an older framework, update it to include the .NET 10 frameworks used by this plugin:
-> ```json
-> {
->   "runtimeOptions": {
->     "tfm": "net10.0",
->     "frameworks": [
->       {
->         "name": "Microsoft.NETCore.App",
->         "version": "10.0.0",
->         "rollForward": "latestMinor"
->       },
->       {
->         "name": "Microsoft.WindowsDesktop.App",
->         "version": "10.0.0",
->         "rollForward": "latestMinor"
->       },
->       {
->         "name": "Microsoft.AspNetCore.App",
->         "version": "10.0.0",
->         "rollForward": "latestMinor"
->       }
->     ]    
->   }
-> }
-> ```
+Download the latest successful artifact from the [build workflow](https://github.com/ShadowNineX/ce-mcp/actions/workflows/build-dlls.yml):
 
-> [!NOTE]
-> If you get `Failure executing CESDK.CESDK:CEPluginInitialize (Result=80070002)`, you are missing the .NET 10.0 runtimes. Install them with:
-> ```powershell
-> winget install Microsoft.DotNet.DesktopRuntime.10
-> winget install Microsoft.DotNet.AspNetCore.10
-> ```
-> Or download them from https://dotnet.microsoft.com/download/dotnet/10.0
+- `ce-mcp-release`: optimized build for normal use.
+- `ce-mcp-debug`: build with debugging information.
 
-## Installation
+Each bundle contains:
 
-### Option 1: Download Pre-built DLLs (Recommended)
-
-Pre-built Debug and Release bundles are automatically generated by GitHub Actions on every commit:
-
-1. Go to the [Actions tab](https://github.com/ShadowNineX/ce-mcp/actions/workflows/build-dlls.yml) on GitHub
-2. Click on the latest successful workflow run
-3. Scroll down to the **Artifacts** section
-4. Download either:
-   - `ce-mcp-debug` - Debug build (larger, with debugging info)
-   - `ce-mcp-release` - Release build (optimized, recommended for normal use)
-5. Extract the downloaded ZIP. It contains `ce-mcp.dll` and the distributable `skills/ce-mcp/` AI skill folder.
-6. Copy `ce-mcp.dll` to your Cheat Engine plugins directory.
-7. Keep or distribute `skills/ce-mcp/` alongside the DLL bundle for AI clients that consume repo skills.
-8. Enable the plugin in Cheat Engine.
-
-### Option 2: Build from Source
-
-```powershell
-git submodule update --init --recursive
-dotnet restore
-dotnet build
+```text
+ce-mcp.dll
+skills/ce-mcp/
 ```
 
-Build output is written to `bin/x64/Debug/net10.0-windows/`. Copy `ce-mcp.dll` from that folder into your Cheat Engine plugins directory, then restart Cheat Engine and enable the plugin. The same output folder also contains `skills/ce-mcp/`; keep that folder with the distributable bundle for AI clients.
+Copy `ce-mcp.dll` into Cheat Engine's `plugins` directory. Keep `skills/ce-mcp/` with the distributed bundle for AI clients that consume repository skills.
 
-Runtime logs from both CESDK and the ASP.NET Core MCP host use NLog and one canonical file: `%APPDATA%\CeMCP\ce-mcp.log`. The file rolls at 10 MiB and retains five archives.
+### 3. Start the server
 
-## Development
+1. Restart Cheat Engine.
+2. Enable the `ce-mcp` plugin in Cheat Engine's plugin settings.
+3. Choose **MCP** -> **Start MCP Server**.
+4. Connect an MCP client to `http://127.0.0.1:6300/`.
+5. Call `get_plugin_version` to confirm which DLL is loaded.
 
-### Initial Setup
+This is a Cheat Engine plugin, not a standalone executable.
 
-First, initialize the git submodule (CESDK):
+## MCP Client Configuration
 
-```powershell
-git submodule update --init --recursive
-```
-
-If you cloned the repo without submodules, this command will download the required CESDK dependency.
-
-### Building
-
-```powershell
-# Build the C# plugin
-dotnet build
-
-# Run normal tests that do not require Cheat Engine
-dotnet test --filter "TestCategory!=Live"
-
-# Build in Release mode
-dotnet build -c Release
-```
-
-**Note**: If you encounter a `FodyCommon.dll` access denied error during restore/build, close your IDE and restart it to release the file lock.
-
-### Testing
-
-The test project is split by runtime requirements:
-
-- `tests/CeMCP.Tests/Unit/`: normal tests that run without Cheat Engine.
-- `tests/CeMCP.Tests/Live/`: opt-in runtime tests that call a CE-loaded `ce-mcp.dll` through MCP.
-- `tests/CeMCP.Tests/Support/`: shared test helpers.
-
-Run the normal dev/CI tests:
-
-```powershell
-dotnet restore
-dotnet build
-dotnet test --filter "TestCategory!=Live"
-```
-
-`dotnet test` without a filter is also safe when Cheat Engine is not running, but the live tests will appear as skipped. CI uses the normal-only filter.
-
-Live tests treat Cheat Engine as the test fixture. Run them only after loading the freshly built DLL into Cheat Engine:
-
-```powershell
-dotnet build
-
-# Copy this DLL into Cheat Engine's plugins directory:
-# bin\x64\Debug\net10.0-windows\ce-mcp.dll
-#
-# Then restart Cheat Engine, enable the plugin, and start the server from the MCP menu.
-
-$env:CE_MCP_LIVE = "1"
-$env:CE_MCP_URL = "http://localhost:6300/"
-dotnet test --filter TestCategory=Live
-```
-
-Default live tests use safe read/inspection calls. The scan regressions also exercise `aob_scan` and a narrow-range named `memory_scan` when CE already has a readable target attached; otherwise those tests are inconclusive. Tests that write memory, attach debuggers, alter execution, load/save files, or require a specific target must stay explicitly opt-in and document setup.
-
-For broad end-to-end coverage against a disposable target, use the dedicated Notepad suite. It launches Notepad through MCP, discovers the real Windows 11 Notepad process, exercises 107 process-scoped tools, restores CE table state, frees allocations, deletes owned temporary files, detaches the debugger, and terminates only the discovered Notepad PID:
-
-```powershell
-$env:CE_MCP_LIVE = "1"
-$env:CE_MCP_NOTEPAD_LIVE = "1"
-$env:CE_MCP_URL = "http://localhost:6300/"
-dotnet test tests/CeMCP.Tests/CeMCP.Tests.csproj -p:Platform=x64 --filter TestCategory=NotepadLive
-```
-
-The suite verifies that every live tool is either attempted or has an explicit exclusion. It excludes `open_foreground_process`, symbol downloads/kernel symbols, native/.NET payload injection, and DBVM initialization/physical-memory/watch operations because those are not safely scoped to the disposable Notepad process.
-
-Manual smoke testing is still useful for UI and CE runtime behavior:
-
-1. Build the plugin and copy `ce-mcp.dll` to the Cheat Engine plugins directory.
-2. Restart Cheat Engine and enable the plugin.
-3. Use the `MCP` menu to start the server.
-4. Connect an MCP client to `http://localhost:6300/`.
-
-### MCP Client Configuration
-
-Add the following to your MCP client configuration (e.g. Claude Desktop `claude_desktop_config.json`):
+For clients that accept a Streamable HTTP endpoint:
 
 ```json
 {
   "mcpServers": {
     "cheat-engine": {
-      "url": "http://localhost:6300/"
+      "url": "http://127.0.0.1:6300/"
     }
   }
 }
 ```
+
+The endpoint is stateless and mapped at `/`.
+
+## Configuration
+
+Choose **MCP** -> **Configure** to edit the host, port, and server name. Settings are persisted to:
+
+```text
+%APPDATA%\CeMCP\config.json
+```
+
+Example:
+
+```json
+{
+  "Host": "127.0.0.1",
+  "Port": 6300,
+  "ServerName": "Cheat Engine MCP Server"
+}
+```
+
+Configuration precedence is:
+
+```text
+defaults < config.json < MCP_HOST / MCP_PORT
+```
+
+Environment override example:
+
+```powershell
+$env:MCP_HOST = "127.0.0.1"
+$env:MCP_PORT = "6300"
+```
+
+> [!IMPORTANT]
+> The default loopback host is intentional. Binding to a non-loopback interface exposes powerful target and host operations to the network. Add authentication and network controls before doing so.
+
+## Runtime Compatibility
+
+Some Cheat Engine 7.6.x installations still declare .NET 9 frameworks in `ce.runtimeconfig.json`. This plugin targets .NET 10 and requires these shared frameworks:
+
+```json
+{
+  "runtimeOptions": {
+    "tfm": "net10.0",
+    "frameworks": [
+      {
+        "name": "Microsoft.NETCore.App",
+        "version": "10.0.0",
+        "rollForward": "latestMinor"
+      },
+      {
+        "name": "Microsoft.WindowsDesktop.App",
+        "version": "10.0.0",
+        "rollForward": "latestMinor"
+      },
+      {
+        "name": "Microsoft.AspNetCore.App",
+        "version": "10.0.0",
+        "rollForward": "latestMinor"
+      }
+    ]
+  }
+}
+```
+
+If Cheat Engine reports `CEPluginInitialize (Result=80070002)`, install the Desktop and ASP.NET Core 10 runtimes and verify this file.
+
+## Architecture
+
+```text
+Cheat Engine
+  -> CESDK plugin bootstrap and shared Lua state
+  -> ce-mcp tool adapter
+  -> typed CESDK facade
+  -> LuaUtils / LuaNative
+  -> Cheat Engine API and target process
+```
+
+`src/McpServer.cs` builds the ASP.NET Core host and explicitly registers every tool class with the required schema transform. HTTP requests may be concurrent, but Cheat Engine Lua state and engine objects are not thread-safe. CE-facing work is serialized onto Cheat Engine's GUI thread.
+
+Stateful scanner order matters:
+
+```text
+deinitialize old results -> scan -> WaitTillDone -> initialize results -> read -> deinitialize
+```
+
+`CESDK/` is a git submodule and is compiled into the plugin assembly. See [`CESDK/README.md`](CESDK/README.md) for wrapper and plugin-bootstrap guidance.
+
+## Build from Source
+
+Clone with the CESDK submodule, then build from the repository root:
+
+```powershell
+git submodule update --init --recursive
+dotnet restore
+dotnet build
+dotnet test --filter "TestCategory!=Live"
+dotnet build -c Release
+```
+
+Outputs:
+
+```text
+bin/x64/Debug/net10.0-windows/ce-mcp.dll
+bin/x64/Release/net10.0-windows/ce-mcp.dll
+```
+
+CI-equivalent sequence:
+
+```powershell
+dotnet restore
+dotnet build -c Debug --no-restore
+dotnet test -c Debug --no-restore --no-build --filter "TestCategory!=Live"
+dotnet build -c Release --no-restore
+```
+
+There is no repository formatter or lint command. SonarCloud is the configured static-analysis gate.
+
+## Testing
+
+### Normal tests
+
+The normal suite is deterministic and does not require Cheat Engine:
+
+```powershell
+dotnet test --filter "TestCategory!=Live"
+```
+
+Test layout:
+
+- `tests/CeMCP.Tests/Unit/`: validation, schemas, configuration, metadata, result shapes, logging, and skill packaging.
+- `tests/CeMCP.Tests/Live/`: opt-in MCP tests against a CE-loaded plugin.
+- `tests/CeMCP.Tests/Support/`: shared result assertions.
+- `CESDK/tests/`: separate CE-loaded wrapper harness and JSON report validator.
+
+### Safe live MCP tests
+
+Build and install the fresh Debug DLL, restart CE, start the MCP server, then run:
+
+```powershell
+$env:CE_MCP_LIVE = "1"
+$env:CE_MCP_URL = "http://127.0.0.1:6300/"
+dotnet test --filter TestCategory=Live
+```
+
+The default live suite uses inspection calls. Scan regressions execute only when CE already has a readable target; otherwise they are inconclusive.
+
+### Dedicated Notepad suite
+
+The opt-in Notepad suite launches a disposable Notepad process through MCP, discovers the real Windows 11 Notepad PID, exercises every process-scoped tool with a safe scenario, restores CE table state, frees allocations, deletes owned temporary files, detaches the debugger, and terminates only that PID.
+
+```powershell
+$env:CE_MCP_LIVE = "1"
+$env:CE_MCP_NOTEPAD_LIVE = "1"
+$env:CE_MCP_URL = "http://127.0.0.1:6300/"
+dotnet test tests/CeMCP.Tests/CeMCP.Tests.csproj `
+  -p:Platform=x64 `
+  --filter TestCategory=NotepadLive
+```
+
+The suite fails if any live tool has neither a test scenario nor a documented exclusion. Exclusions are limited to operations that are not safely scoped to Notepad: foreground retargeting, symbol downloads/kernel symbols, native/.NET payload injection, and DBVM initialization/physical-memory/watch operations.
+
+## Logging and Troubleshooting
+
+CESDK and the ASP.NET Core host use one isolated NLog factory and one log file:
+
+```text
+%APPDATA%\CeMCP\ce-mcp.log
+```
+
+The file rolls at 10 MiB and retains five archives.
+
+Common checks:
+
+1. Call `get_plugin_version` and verify the reported DLL path/version.
+2. Confirm CE was restarted after replacing the DLL.
+3. Verify the Desktop and ASP.NET Core 10 runtimes are installed.
+4. Verify `ce.runtimeconfig.json` declares the .NET 10 frameworks.
+5. Inspect `%APPDATA%\CeMCP\ce-mcp.log`.
+6. Keep the server on loopback while debugging connectivity.
+
+If a build reports a locked Fody or DLL file, close Cheat Engine and any process loading the build output, then rebuild.
 
 ## Contributors
 
