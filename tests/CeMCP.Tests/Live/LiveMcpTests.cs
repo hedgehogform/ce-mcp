@@ -155,6 +155,166 @@ public sealed class LiveMcpTests
         }
     }
 
+    [TestMethod]
+    public async Task LiveServer_NamedMemoryNextScanReusesFoundListSafely()
+    {
+        await using LiveMcpClient client = await LiveMcpClient.ConnectAsync(ServerUrl);
+        (ulong address, byte[] bytes) = await GetReadableModuleSampleAsync(client, 1);
+        const string scannerName = "ce-mcp-live-next-scan-lifecycle";
+        var arguments = new Dictionary<string, object?>
+        {
+            ["scanOption"] = "soExactValue",
+            ["varType"] = "vtByte",
+            ["input1"] = bytes[0].ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["input2"] = "",
+            ["startAddress"] = address,
+            ["stopAddress"] = address + 1,
+            ["protectionFlags"] = "",
+            ["alignmentType"] = "fsmNotAligned",
+            ["alignmentParam"] = "",
+            ["isHexadecimalInput"] = false,
+            ["isUnicodeScan"] = false,
+            ["isCaseSensitive"] = false,
+            ["isPercentageScan"] = false,
+            ["scannerName"] = scannerName
+        };
+
+        await client.CallToolAsync("reset_memory_scan", new Dictionary<string, object?>
+        {
+            ["scannerName"] = scannerName
+        });
+
+        try
+        {
+            JsonNode? first = await client.CallToolAsync("memory_scan", arguments);
+            Assert.IsTrue(first?["success"]?.GetValue<bool>());
+            Assert.IsTrue(first?["count"]?.GetValue<int>() > 0);
+
+            JsonNode? next = await client.CallToolAsync("memory_scan", arguments);
+            Assert.IsTrue(next?["success"]?.GetValue<bool>());
+            Assert.IsTrue(next?["count"]?.GetValue<int>() > 0);
+            JsonArray? results = next?["results"] as JsonArray;
+            Assert.IsNotNull(results);
+            Assert.IsTrue(
+                results.Any(result => string.Equals(
+                    result?["address"]?.GetValue<string>(),
+                    $"0x{address:X}",
+                    StringComparison.OrdinalIgnoreCase)),
+                $"Next scan did not retain sampled module address 0x{address:X}.");
+        }
+        finally
+        {
+            await client.CallToolAsync("reset_memory_scan", new Dictionary<string, object?>
+            {
+                ["scannerName"] = scannerName
+            });
+        }
+    }
+
+    [TestMethod]
+    [TestCategory("DebuggerLive")]
+    [Timeout(180_000)]
+    public async Task LiveServer_DebuggerReattachesRepeatedlyToStableTarget()
+    {
+        if (Environment.GetEnvironmentVariable("CE_MCP_DEBUGGER_LIVE") != "1")
+            Assert.Inconclusive("Set CE_MCP_DEBUGGER_LIVE=1 and attach a disposable classic target.");
+
+        await using LiveMcpClient client = await LiveMcpClient.ConnectAsync(ServerUrl);
+        JsonNode? process = await client.CallToolAsync("get_current_process");
+        Assert.IsTrue(process?["isOpen"]?.GetValue<bool>());
+        int processId = process?["processId"]?.GetValue<int>()
+            ?? throw new AssertFailedException("Current process response did not include a PID.");
+
+        JsonNode? initialStatus = await client.CallToolAsync("dbg_is_debugging");
+        if (initialStatus?["is_debugging"]?.GetValue<bool>() == true)
+            await client.CallToolAsync("dbg_exit");
+
+        string? allocationAddress = null;
+
+        try
+        {
+            for (int cycle = 1; cycle <= 5; cycle++)
+            {
+                JsonNode? attached = await client.CallToolAsync(
+                    "dbg_start",
+                    new Dictionary<string, object?> { ["debugInterface"] = 2 });
+                Assert.IsTrue(attached?["success"]?.GetValue<bool>(), $"Attach cycle {cycle} failed: {attached}");
+                Assert.AreEqual(processId, attached?["processId"]?.GetValue<int>());
+                Assert.AreEqual(2, attached?["requestedDebuggerInterface"]?.GetValue<int>());
+                Assert.AreEqual(2, attached?["debuggerInterface"]?.GetValue<int>());
+                Assert.IsFalse(attached?["usedFallback"]?.GetValue<bool>());
+
+                JsonNode? idempotent = await client.CallToolAsync(
+                    "dbg_start",
+                    new Dictionary<string, object?> { ["debugInterface"] = 2 });
+                Assert.IsTrue(idempotent?["alreadyAttached"]?.GetValue<bool>());
+                Assert.AreEqual(processId, idempotent?["processId"]?.GetValue<int>());
+
+                JsonNode? detached = await client.CallToolAsync("dbg_exit");
+                Assert.IsTrue(detached?["success"]?.GetValue<bool>(), $"Detach cycle {cycle} failed: {detached}");
+                Assert.AreEqual(processId, detached?["processId"]?.GetValue<int>());
+                Assert.IsFalse(detached?["isDebugging"]?.GetValue<bool>());
+
+                JsonNode? current = await client.CallToolAsync("get_current_process");
+                Assert.AreEqual(processId, current?["processId"]?.GetValue<int>());
+                Assert.IsTrue(current?["isOpen"]?.GetValue<bool>());
+            }
+
+            JsonNode? allocation = await client.CallToolAsync(
+                "allocate_memory",
+                new Dictionary<string, object?> { ["size"] = 64UL });
+            allocationAddress = allocation?["address"]?.GetValue<string>()
+                ?? throw new AssertFailedException("Debugger smoke allocation returned no address.");
+
+            JsonNode? smokeAttach = await client.CallToolAsync(
+                "dbg_start",
+                new Dictionary<string, object?> { ["debugInterface"] = 2 });
+            Assert.AreEqual(2, smokeAttach?["debuggerInterface"]?.GetValue<int>());
+
+            JsonNode? breakpoint = await client.CallToolAsync(
+                "dbg_add_bp",
+                new Dictionary<string, object?>
+                {
+                    ["address"] = allocationAddress,
+                    ["size"] = 1,
+                    ["trigger"] = "execute",
+                    ["trackHits"] = false
+                });
+            Assert.IsTrue(breakpoint?["success"]?.GetValue<bool>());
+
+            JsonNode? breakpoints = await client.CallToolAsync("dbg_bps");
+            JsonArray? addresses = breakpoints?["breakpoints"] as JsonArray;
+            Assert.IsNotNull(addresses);
+            Assert.IsTrue(addresses.Any(value => string.Equals(
+                value?.GetValue<string>(),
+                allocationAddress,
+                StringComparison.OrdinalIgnoreCase)));
+
+            JsonNode? deleted = await client.CallToolAsync(
+                "dbg_delete_bp",
+                new Dictionary<string, object?> { ["address"] = allocationAddress });
+            Assert.IsTrue(deleted?["success"]?.GetValue<bool>());
+
+            JsonNode? smokeExit = await client.CallToolAsync("dbg_exit");
+            Assert.IsFalse(smokeExit?["isDebugging"]?.GetValue<bool>());
+        }
+        finally
+        {
+            JsonNode? status = await client.CallToolAsync("dbg_is_debugging");
+            if (status?["is_debugging"]?.GetValue<bool>() == true)
+                await client.CallToolAsync("dbg_exit");
+            if (allocationAddress is not null)
+            {
+                await client.CallToolAsync(
+                    "dbg_delete_bp",
+                    new Dictionary<string, object?> { ["address"] = allocationAddress });
+                await client.CallToolAsync(
+                    "free_memory",
+                    new Dictionary<string, object?> { ["address"] = allocationAddress });
+            }
+        }
+    }
+
     private static async Task<(ulong Address, byte[] Bytes)> GetReadableModuleSampleAsync(
         LiveMcpClient client,
         int byteCount)

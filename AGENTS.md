@@ -63,6 +63,7 @@ Manual run: copy the built DLL to Cheat Engine's plugins directory, restart CE, 
 - Prefer typed CESDK facades such as `MemoryAccess`, `MemScan`, `Assembler`, and `SymbolManager`. Use `execute_lua` only when no dedicated tool fits, and consult the installed Cheat Engine `celua.txt` before changing Lua bindings or guidance.
 - Format addresses as uppercase hexadecimal (`0x{value:X}`). Use strict `AddressParser` where only hex is accepted and `AddressResolver` where symbols are supported.
 - Preserve local response-field conventions. Most tools use camelCase; debugger responses intentionally include snake_case fields.
+- Preserve the debugger lifecycle invariant from CE source: same-PID detach/reattach keeps the existing valid process handle. `dbg_exit` unpauses and detaches without reopening; inactive start attaches directly; active interface switching detaches once. Preflight PID liveness, accept/report CE interface fallback, and keep repeated matching requests idempotent.
 - Server start/stop is asynchronous; tool operations generally are not. The configuration window owns a separate STA thread and WPF `Dispatcher`.
 - Configuration precedence is defaults (`127.0.0.1:6300`) < `%APPDATA%\CeMCP\config.json` < `MCP_HOST`/`MCP_PORT`.
 - Route CESDK and ASP.NET Core logging through the isolated NLog factory in `CESDK/src/PluginLogger.cs`. The only log path is `%APPDATA%\CeMCP\ce-mcp.log`; do not add direct file loggers or alternate fallback paths.

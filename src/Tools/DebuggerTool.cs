@@ -70,25 +70,43 @@ end)()";
 
         [McpServerTool(Name = "dbg_start"), Description(
             "Attach the Cheat Engine debugger to the currently opened process. " +
-            "Must be called before setting breakpoints or reading registers. " +
-            "debugInterface: 0=default (recommended), 1=windows, 2=VEH, 3=kernel.")]
+            "The operation validates that the PID is still live, preserves CE's same-process handle, and is idempotent for an active interface or known CE fallback. " +
+            "debugInterface: 0=default, 1=windows, 2=VEH, 3=kernel. The response reports the actual interface selected by CE.")]
         public static object DbgStart(
-            [Description("Debugger interface to use: 0=default, 1=windows, 2=VEH, 3=kernel")] int debugInterface = 0)
+            [Description("Debugger interface to request: 0=default, 1=windows, 2=VEH, 3=kernel")] int debugInterface = 0)
             => SafeRun(() =>
             {
                 if (debugInterface is < 0 or > 3)
                     return new { success = false, error = "debugInterface must be between 0 and 3" };
-                Debugger.DebugProcess(debugInterface);
-                return new { success = true, message = "Debugger attached" };
+
+                DebuggerAttachResult result = Debugger.DebugProcess(debugInterface);
+                return new
+                {
+                    success = true,
+                    message = result.UsedFallback
+                        ? "Debugger attached using Cheat Engine's fallback interface"
+                        : "Debugger attached",
+                    processId = result.ProcessId,
+                    requestedDebuggerInterface = result.RequestedInterface,
+                    debuggerInterface = result.ActualInterface,
+                    usedFallback = result.UsedFallback,
+                    alreadyAttached = result.AlreadyAttached
+                };
             });
 
         [McpServerTool(Name = "dbg_exit"), Description(
-            "Detach the Cheat Engine debugger from the target process.")]
+            "Unpause and detach the Cheat Engine debugger while preserving the same live target process handle for a later reattach.")]
         public static object DbgExit()
             => SafeRun(() =>
             {
                 Debugger.DetachIfPossible();
-                return new { success = true, message = "Debugger detached" };
+                return new
+                {
+                    success = true,
+                    message = "Debugger detached; target handle preserved",
+                    processId = Process.GetOpenedProcessID(),
+                    isDebugging = Debugger.IsDebugging()
+                };
             });
 
         [McpServerTool(Name = "dbg_is_debugging"), Description(

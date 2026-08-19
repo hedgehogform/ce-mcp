@@ -39,6 +39,7 @@ Start target-memory workflows with `get_current_process`. `create_process` launc
 
 Empty protection/alignment strings, zero-valued enums, and `false` flags are valid positional CE arguments and must not be dropped. Prefer named scanners for automation so the CE GUI scanner is unchanged.
 Named scanners are limited to 32 active instances and names are limited to 64 characters; reset scanners when finished.
+For first/next scans, ce-mcp deinitializes result access before scanning, keeps one FoundList object owned by the named MemScan, and reinitializes that object after `WaitTillDone()`. Destroying and recreating the FoundList between scans can crash Cheat Engine.
 
 Useful enum values:
 
@@ -100,6 +101,9 @@ Generation tools return text and do not execute it. `execute_remote_function_ex`
 ## Debugger
 
 - Attach/status: `dbg_start`, `dbg_exit`, `dbg_is_debugging`, `dbg_is_broken`.
+
+`dbg_exit` unpauses and detaches while preserving Cheat Engine's valid same-PID process handle, matching CE's own reattach path. An inactive `dbg_start` attaches directly; switching an active interface performs one detach before attaching the requested interface. Matching interfaces and CE-selected fallbacks are idempotent. The response reports requested and actual interfaces plus `usedFallback`.
+
 - Breakpoints: `dbg_add_bp`, `dbg_toggle_bp`, `dbg_delete_bp`, `dbg_bps`, `dbg_add_thread_bp`.
 - Hit tracking: `dbg_get_bp_hits`, `dbg_clear_bp_hits`.
 - Thread control: `dbg_break_thread`, `dbg_exclude_thread`, `dbg_include_thread`.

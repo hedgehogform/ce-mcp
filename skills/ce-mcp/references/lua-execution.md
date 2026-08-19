@@ -101,15 +101,15 @@ return result
 
 ## Scanner And Object Lifetime
 
-Prefer ce-mcp scan tools for `MemScan` workflows. They already handle the fragile sequence: deinitialize stale results, scan, `WaitTillDone()`, then initialize results.
+Prefer ce-mcp scan tools for `MemScan` workflows. They handle the fragile sequence: deinitialize result access, scan, `waitTillDone()`, then reinitialize the same FoundList.
 
 If Lua must use CE scan APIs:
 
 - `AOBScan(...)` returns a StringList; copy the addresses you need, then free the list.
 - CE scan APIs are positional: do not drop empty strings, zero-valued alignment enums, or `false` flags when later arguments are supplied.
 - `createMemScan(...)` returns a MemScan object; call `waitTillDone()` after `firstScan`, `nextScan`, or `scan`.
-- `FoundList.initialize()` must happen after scanning is complete, and `FoundList.deinitialize()` should release result access when done.
-- Do not keep FoundList objects across next scans unless the CE docs for that exact workflow say it is safe.
+- `FoundList.initialize()` must happen after scanning completes; call `FoundList.deinitialize()` before the next scan.
+- Keep one FoundList object per MemScan across first/next scans. Destroy it only when the MemScan workflow ends; destroying and recreating it between scans can invalidate CE's result ownership and crash the host.
 - Keep returned result sets small. Return counts and first matches rather than massive arrays.
 
 ## Safety Rules

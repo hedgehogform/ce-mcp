@@ -412,7 +412,28 @@ public sealed class NotepadMcpTests
         JsonNode process = await CallSuccess("get_current_process");
         int threadId = RequiredArray(process, "threads")[0]!.GetValue<int>();
 
-        await CallSuccess("dbg_start", Args(("debugInterface", 2)));
+        for (int cycle = 1; cycle <= 2; cycle++)
+        {
+            JsonNode attached = await CallSuccess(
+                "dbg_start",
+                Args(("debugInterface", 1)));
+            Assert.AreEqual(notepadProcessId, Required<int>(attached, "processId"));
+            Assert.AreEqual(1, Required<int>(attached, "debuggerInterface"));
+
+            JsonNode idempotent = await CallSuccess(
+                "dbg_start",
+                Args(("debugInterface", 1)));
+            Assert.AreEqual(notepadProcessId, Required<int>(idempotent, "processId"));
+
+            JsonNode detached = await CallSuccess("dbg_exit");
+            Assert.AreEqual(notepadProcessId, Required<int>(detached, "processId"));
+            Assert.IsFalse(Required<bool>(detached, "isDebugging"));
+
+            JsonNode current = await CallSuccess("get_current_process");
+            Assert.AreEqual(notepadProcessId, Required<int>(current, "processId"));
+        }
+
+        await CallSuccess("dbg_start", Args(("debugInterface", 1)));
         await CallSuccess("dbg_is_debugging");
         await CallSuccess("dbg_is_broken");
         await CallSuccess("dbg_bps");
