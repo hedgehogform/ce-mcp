@@ -153,25 +153,7 @@ namespace CEMCP
 
                         PluginContext.Lua.DoString($"print('Error: {msg.Replace("'", "\\'").Replace("\n", " ").Replace("\r", "")}')");
 
-                        try
-                        {
-                            var logPath = System.IO.Path.Combine(
-                                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                                "CeMCP",
-                                "error.log"
-                            );
-                            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath)!);
-                            System.IO.File.AppendAllText(logPath,
-                                $"[{DateTime.Now}] Window Error: {ex.Message}\n" +
-                                $"Type: {ex.GetType().Name}\n" +
-                                $"Inner: {ex.InnerException?.Message}\n" +
-                                $"Stack: {ex.StackTrace}\n\n");
-                        }
-                        catch
-                        {
-                            // Best-effort logging - ignore file write failures (e.g., permission issues, disk full)
-                            // The error was already logged to CE console via Lua print above
-                        }
+                        PluginLogger.LogException(ex);
                         configWindow = null;
                     }
                 });
@@ -236,26 +218,7 @@ namespace CEMCP
 
                 PluginContext.Lua.DoString($"print('Error: {errorMsg.Replace("'", "\\'").Replace("\n", " ")}')");
 
-                // Also try to write to a log file for debugging
-                try
-                {
-                    var logPath = System.IO.Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                        "CeMCP",
-                        "error.log"
-                    );
-                    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath)!);
-                    System.IO.File.WriteAllText(logPath,
-                        $"[{DateTime.Now}] {errorMsg}\n" +
-                        $"Type: {ex.GetType().FullName}\n" +
-                        $"Stack: {ex.StackTrace}\n" +
-                        (ex.InnerException != null ? $"Inner Stack: {ex.InnerException.StackTrace}\n" : "")
-                    );
-                }
-                catch
-                {
-                    // Ignore file write errors - logging is best effort only
-                }
+                PluginLogger.LogException(ex);
             }
         }
 

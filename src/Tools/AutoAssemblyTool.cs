@@ -18,18 +18,22 @@ namespace Tools
         public static object Assemble(
             [Description("Assembly instruction to assemble (e.g. 'nop', 'mov eax,ebx')")] string instruction,
             [Description("Address to assemble at (affects relative addressing). Hex string e.g. '0x401000'")] string? address = null,
-            [Description("Preference: 0=none, 1=short, 2=long, 3=far")] int assemblePreference = 0)
+            [Description("Preference: 0=none, 1=short, 2=long, 3=far")] int assemblePreference = 0,
+            [Description("Skip relative branch range checks")] bool skipRangeCheck = false)
         {
             return ToolThread.OnMainThread(() =>
             {
                 if (string.IsNullOrWhiteSpace(instruction))
                     return new { success = false, error = "Instruction is required" };
 
+                if (assemblePreference is < 0 or > 3)
+                    return new { success = false, error = "Assemble preference must be between 0 and 3" };
+
                 ulong addr = 0;
                 if (!string.IsNullOrEmpty(address) && !TryParseAddress(address, out addr))
                     return new { success = false, error = "Invalid address format" };
 
-                var bytes = Assembler.Assemble(instruction, addr, assemblePreference);
+                var bytes = Assembler.Assemble(instruction, addr, assemblePreference, skipRangeCheck);
                 return new
                 {
                     success = true,
@@ -41,20 +45,28 @@ namespace Tools
         }
 
         [McpServerTool(Name = "auto_assemble"), Description(
-            "Execute a Cheat Engine Auto Assembler script. Supports [ENABLE]/[DISABLE] sections, " +
-            "alloc, label, registersymbol, AOB injection, code injection, and all AA features. " +
-            "This is the primary way to inject code, create hooks, and modify game code.")]
+            "Enable or disable a Cheat Engine Auto Assembler script. " +
+            "Omit disableId to execute [ENABLE]; retain the returned disableId and pass it with the same script to execute [DISABLE].")]
         public static object AutoAssemble(
-            [Description("Auto assembler script text. Supports [ENABLE]/[DISABLE] sections, alloc(), label(), etc.")] string script,
-            [Description("If true, assemble into Cheat Engine process instead of target")] bool targetSelf = false)
+            [Description("Auto Assembler script text with [ENABLE]/[DISABLE] sections")] string script,
+            [Description("If true, assemble into Cheat Engine instead of the target; used only while enabling")] bool targetSelf = false,
+            [Description("Disable ID returned by the matching enable call; omit to enable")] string? disableId = null)
         {
             return ToolThread.OnMainThread(() =>
             {
                 if (string.IsNullOrWhiteSpace(script))
                     return new { success = false, error = "Script is required" };
 
-                var result = Assembler.AutoAssemble(script, targetSelf);
-                return new { success = result };
+                if (!string.IsNullOrWhiteSpace(disableId))
+                {
+                    Assembler.AutoAssembleDisable(script, disableId);
+                    return new { success = true, mode = "disabled", disableId, warnings = Array.Empty<string>() };
+                }
+                if (!targetSelf)
+                    RequireAttachedProcess();
+
+                AutoAssembleResult result = Assembler.AutoAssemble(script, targetSelf);
+                return new { success = true, mode = "enabled", disableId = result.DisableId, warnings = result.Warnings.ToArray() };
             });
         }
 
@@ -68,6 +80,8 @@ namespace Tools
             {
                 if (string.IsNullOrWhiteSpace(script))
                     return new { success = false, error = "Script is required" };
+                if (!targetSelf)
+                    RequireAttachedProcess();
 
                 var (syntaxOk, errorMessage) = Assembler.AutoAssembleCheck(script, enable, targetSelf);
                 if (syntaxOk)
@@ -75,6 +89,12 @@ namespace Tools
                 else
                     return new { success = true, syntaxValid = false, error = errorMessage ?? "Unknown syntax error" };
             });
+        }
+
+        private static void RequireAttachedProcess()
+        {
+            if (CESDK.Classes.Process.GetOpenedProcessID() <= 0)
+                throw new InvalidOperationException("No process is attached. Open a process first.");
         }
 
         private static bool TryParseAddress(string address, out ulong result) =>

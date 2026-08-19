@@ -76,4 +76,146 @@ public sealed class LiveMcpTests
         Assert.IsTrue(payload?["success"]?.GetValue<bool>());
         Assert.IsNotNull(payload?["isOpen"]);
     }
+
+    [TestMethod]
+    public async Task LiveServer_AobScanPreservesEmptyAndZeroOptionalArguments()
+    {
+        await using LiveMcpClient client = await LiveMcpClient.ConnectAsync(ServerUrl);
+        (ulong address, byte[] bytes) = await GetReadableModuleSampleAsync(client, 16);
+        string pattern = string.Join(" ", bytes.Select(value => value.ToString("X2")));
+
+        JsonNode? payload = await client.CallToolAsync("aob_scan", new Dictionary<string, object?>
+        {
+            ["pattern"] = pattern,
+            ["protectionFlags"] = "",
+            ["alignmentType"] = 0,
+            ["alignmentParam"] = ""
+        });
+
+        Assert.IsTrue(payload?["success"]?.GetValue<bool>());
+        JsonArray? addresses = payload?["addresses"] as JsonArray;
+        Assert.IsNotNull(addresses);
+        Assert.IsTrue(
+            addresses.Any(node => string.Equals(
+                node?.GetValue<string>(),
+                $"0x{address:X}",
+                StringComparison.OrdinalIgnoreCase)),
+            $"AOB scan did not return the sampled module address 0x{address:X}.");
+    }
+
+    [TestMethod]
+    public async Task LiveServer_NamedMemoryScanPreservesEmptyZeroAndFalseArguments()
+    {
+        await using LiveMcpClient client = await LiveMcpClient.ConnectAsync(ServerUrl);
+        (ulong address, byte[] bytes) = await GetReadableModuleSampleAsync(client, 1);
+        const string scannerName = "ce-mcp-live-empty-defaults";
+
+        await client.CallToolAsync("reset_memory_scan", new Dictionary<string, object?>
+        {
+            ["scannerName"] = scannerName
+        });
+
+        try
+        {
+            JsonNode? payload = await client.CallToolAsync("memory_scan", new Dictionary<string, object?>
+            {
+                ["scanOption"] = "soExactValue",
+                ["varType"] = "vtByte",
+                ["input1"] = bytes[0].ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["input2"] = "",
+                ["startAddress"] = address,
+                ["stopAddress"] = address + 1,
+                ["protectionFlags"] = "",
+                ["alignmentType"] = "fsmNotAligned",
+                ["alignmentParam"] = "",
+                ["isHexadecimalInput"] = false,
+                ["isUnicodeScan"] = false,
+                ["isCaseSensitive"] = false,
+                ["isPercentageScan"] = false,
+                ["scannerName"] = scannerName
+            });
+
+            Assert.IsTrue(payload?["success"]?.GetValue<bool>());
+            Assert.IsTrue(payload?["count"]?.GetValue<int>() > 0);
+            JsonArray? results = payload?["results"] as JsonArray;
+            Assert.IsNotNull(results);
+            Assert.IsTrue(
+                results.Any(result => string.Equals(
+                    result?["address"]?.GetValue<string>(),
+                    $"0x{address:X}",
+                    StringComparison.OrdinalIgnoreCase)),
+                $"Memory scan did not return the sampled module address 0x{address:X}.");
+        }
+        finally
+        {
+            await client.CallToolAsync("reset_memory_scan", new Dictionary<string, object?>
+            {
+                ["scannerName"] = scannerName
+            });
+        }
+    }
+
+    private static async Task<(ulong Address, byte[] Bytes)> GetReadableModuleSampleAsync(
+        LiveMcpClient client,
+        int byteCount)
+    {
+        JsonNode? process = await client.CallToolAsync("get_current_process");
+        if (process?["isOpen"]?.GetValue<bool>() != true)
+        {
+            Assert.Inconclusive(
+                "Scan regression tests require Cheat Engine to have a readable target process attached.");
+        }
+
+        JsonNode? modulesPayload = await client.CallToolAsync("enum_modules");
+        JsonArray? modules = modulesPayload?["modules"] as JsonArray;
+        if (modules is not null)
+        {
+            foreach (JsonNode? module in modules)
+            {
+                string? addressText = module?["address"]?.GetValue<string>();
+                if (!TryParseHexAddress(addressText, out ulong address))
+                    continue;
+
+                JsonNode? readPayload = await client.CallToolAsync("read_memory", new Dictionary<string, object?>
+                {
+                    ["address"] = addressText,
+                    ["dataType"] = "bytes",
+                    ["byteCount"] = byteCount
+                });
+
+                if (readPayload?["success"]?.GetValue<bool>() != true)
+                    continue;
+
+                byte[] bytes = ExtractBytes(readPayload["value"]);
+                if (bytes.Length == byteCount)
+                    return (address, bytes);
+            }
+        }
+
+        Assert.Inconclusive("No readable module base was available for the scan regression tests.");
+        return default;
+    }
+
+    private static bool TryParseHexAddress(string? value, out ulong address)
+    {
+        string text = value?.StartsWith("0x", StringComparison.OrdinalIgnoreCase) == true
+            ? value[2..]
+            : value ?? "";
+        return ulong.TryParse(
+            text,
+            System.Globalization.NumberStyles.HexNumber,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out address);
+    }
+
+    private static byte[] ExtractBytes(JsonNode? value)
+    {
+        if (value is JsonArray array)
+            return array.Select(node => node?.GetValue<byte>() ?? 0).ToArray();
+
+        if (value is JsonValue)
+            return Convert.FromBase64String(value.GetValue<string>());
+
+        return [];
+    }
 }

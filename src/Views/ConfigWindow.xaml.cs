@@ -2,9 +2,9 @@ using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using CEMCP.Models;
+using CESDK;
 
 namespace CEMCP.Views
 {
@@ -27,6 +27,7 @@ namespace CEMCP.Views
             InitializeComponent();
             ApplyTheme(isDarkMode);
             UpdateServerStatus();
+            Activated += (_, _) => UpdateServerStatus();
         }
 
         private static bool IsServerRunning(McpPlugin? plugin)
@@ -39,7 +40,6 @@ namespace CEMCP.Views
         {
             bool running = IsServerRunning(_plugin);
             _viewModel.ServerStatus = running ? "Running" : "Stopped";
-            openApiButton.IsEnabled = running;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -47,7 +47,7 @@ namespace CEMCP.Views
             try
             {
                 _viewModel.SaveToServerConfig();
-                _viewModel.TestResult = "Configuration saved successfully.";
+                _viewModel.TestResult = "Settings saved. Start the server to apply them.";
             }
             catch (Exception ex)
             {
@@ -57,54 +57,71 @@ namespace CEMCP.Views
 
         private async void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            _viewModel.TestResult = "Testing connection...";
+            testButton.IsEnabled = false;
+            _viewModel.TestResult = $"Testing {_viewModel.BaseUrl} ...";
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                // Streamable HTTP requires Accept: application/json, text/event-stream
-                client.DefaultRequestHeaders.Add("Accept", "application/json, text/event-stream");
-                var content = new StringContent(
-                    "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}",
-                    System.Text.Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(_viewModel.BaseUrl, content);
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+                client.DefaultRequestHeaders.Accept.ParseAdd("text/event-stream");
+                using var content = new StringContent(
+                    "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"ce-mcp-config\",\"version\":\"1.0\"}}}",
+                    System.Text.Encoding.UTF8,
+                    "application/json");
+                using HttpResponseMessage response = await client.PostAsync(_viewModel.BaseUrl, content);
                 _viewModel.TestResult = response.IsSuccessStatusCode
-                    ? "✓ Connection successful! MCP Server is responding."
-                    : $"✗ Server responded with status: {response.StatusCode}";
+                    ? "Connection successful. The MCP server responded."
+                    : $"Connection failed: HTTP {(int)response.StatusCode} {response.ReasonPhrase}.";
             }
             catch (HttpRequestException ex)
             {
-                _viewModel.TestResult = $"✗ Connection failed: {ex.Message}";
+                _viewModel.TestResult = $"Connection failed: {ex.Message}";
             }
             catch (TaskCanceledException)
             {
-                _viewModel.TestResult = "✗ Connection timed out. Server may not be running.";
+                _viewModel.TestResult = "Connection timed out. Start the server and verify the host and port.";
             }
             catch (Exception ex)
             {
-                _viewModel.TestResult = $"✗ Error testing connection: {ex.Message}";
+                _viewModel.TestResult = $"Connection test failed: {ex.Message}";
+            }
+            finally
+            {
+                testButton.IsEnabled = true;
             }
         }
 
         private void StartStopButton_Click(object sender, RoutedEventArgs e)
         {
+            startStopButton.IsEnabled = false;
             try
             {
                 if (IsServerRunning(_plugin))
                 {
+                    _viewModel.ServerStatus = "Stopping";
                     _plugin.StopServer();
+                    UpdateServerStatus();
                     _viewModel.TestResult = "Server stopped.";
                 }
                 else
                 {
                     _viewModel.SaveToServerConfig();
-                    _plugin?.StartServer();
-                    _viewModel.TestResult = "Server started.";
+                    _viewModel.ServerStatus = "Starting";
+                    _plugin.StartServer();
+                    UpdateServerStatus();
+                    _viewModel.TestResult = IsServerRunning(_plugin)
+                        ? $"Server listening at {_viewModel.BaseUrl}"
+                        : $"Server did not start. Check the Cheat Engine console or {PluginLogger.LogFilePath}.";
                 }
-                UpdateServerStatus();
             }
             catch (Exception ex)
             {
-                _viewModel.TestResult = $"Error: {ex.Message}";
+                UpdateServerStatus();
+                _viewModel.TestResult = $"Server action failed: {ex.Message}";
+            }
+            finally
+            {
+                startStopButton.IsEnabled = true;
             }
         }
 
@@ -125,77 +142,55 @@ namespace CEMCP.Views
         private void ApplyTheme(bool isDarkMode)
         {
             string prefix = isDarkMode ? "Dark" : "Light";
-            var brushes = ResolveThemeBrushes(prefix);
+            ThemeBrushes brushes = ResolveThemeBrushes(prefix);
 
-            Background = brushes.Background;
-            Resources["BtnHoverBrush"] = brushes.BtnHover;
-            Resources["BtnDisabledBgBrush"] = brushes.BtnDisabledBg;
-            Resources["BtnDisabledFgBrush"] = brushes.BtnDisabledFg;
-
-            ApplyThemeToChildren((Grid)Content, brushes);
+            Resources["WindowBgBrush"] = brushes.Background;
+            Resources["SurfaceBrush"] = brushes.Surface;
+            Resources["TextBrush"] = brushes.Foreground;
+            Resources["MutedTextBrush"] = brushes.MutedForeground;
+            Resources["TextBoxBgBrush"] = brushes.TextBoxBackground;
+            Resources["TextBoxBorderBrush"] = brushes.TextBoxBorder;
+            Resources["BtnBgBrush"] = brushes.ButtonBackground;
+            Resources["BtnBorderBrush"] = brushes.ButtonBorder;
+            Resources["BtnDisabledBgBrush"] = brushes.ButtonDisabledBackground;
+            Resources["BtnDisabledFgBrush"] = brushes.ButtonDisabledForeground;
+            Resources["AccentBrush"] = brushes.Accent;
         }
 
         private ThemeBrushes ResolveThemeBrushes(string prefix)
         {
             return new ThemeBrushes
             {
-                Background = new SolidColorBrush((Color)FindResource($"{prefix}Bg")),
-                Foreground = new SolidColorBrush((Color)FindResource($"{prefix}Fg")),
-                TextBoxBg = new SolidColorBrush((Color)FindResource($"{prefix}TextBoxBg")),
-                TextBoxBorder = new SolidColorBrush((Color)FindResource($"{prefix}TextBoxBorder")),
-                BtnBg = new SolidColorBrush((Color)FindResource($"{prefix}BtnBg")),
-                BtnBorder = new SolidColorBrush((Color)FindResource($"{prefix}BtnBorder")),
-                BtnHover = new SolidColorBrush((Color)FindResource($"{prefix}BtnHover")),
-                BtnDisabledBg = new SolidColorBrush((Color)FindResource($"{prefix}BtnDisabledBg")),
-                BtnDisabledFg = new SolidColorBrush((Color)FindResource($"{prefix}BtnDisabledFg")),
+                Background = GetBrush($"{prefix}Bg"),
+                Surface = GetBrush($"{prefix}Surface"),
+                Foreground = GetBrush($"{prefix}Fg"),
+                MutedForeground = GetBrush($"{prefix}MutedFg"),
+                TextBoxBackground = GetBrush($"{prefix}TextBoxBg"),
+                TextBoxBorder = GetBrush($"{prefix}TextBoxBorder"),
+                ButtonBackground = GetBrush($"{prefix}BtnBg"),
+                ButtonBorder = GetBrush($"{prefix}BtnBorder"),
+                ButtonDisabledBackground = GetBrush($"{prefix}BtnDisabledBg"),
+                ButtonDisabledForeground = GetBrush($"{prefix}BtnDisabledFg"),
+                Accent = GetBrush($"{prefix}Accent"),
             };
         }
 
-        private static void ApplyThemeToChildren(Grid grid, ThemeBrushes brushes)
-        {
-            foreach (var child in grid.Children)
-            {
-                switch (child)
-                {
-                    case TextBlock tb:
-                        tb.Foreground = brushes.Foreground;
-                        break;
-                    case TextBox box:
-                        box.Background = brushes.TextBoxBg;
-                        box.Foreground = brushes.Foreground;
-                        box.BorderBrush = brushes.TextBoxBorder;
-                        break;
-                    case WrapPanel panel:
-                        ApplyThemeToButtons(panel, brushes);
-                        break;
-                }
-            }
-        }
-
-        private static void ApplyThemeToButtons(WrapPanel panel, ThemeBrushes brushes)
-        {
-            foreach (var child in panel.Children)
-            {
-                if (child is Button button)
-                {
-                    button.Background = brushes.BtnBg;
-                    button.Foreground = brushes.Foreground;
-                    button.BorderBrush = brushes.BtnBorder;
-                }
-            }
-        }
+        private SolidColorBrush GetBrush(string resourceName) =>
+            new((Color)FindResource(resourceName));
 
         private sealed class ThemeBrushes
         {
             public required SolidColorBrush Background { get; init; }
+            public required SolidColorBrush Surface { get; init; }
             public required SolidColorBrush Foreground { get; init; }
-            public required SolidColorBrush TextBoxBg { get; init; }
+            public required SolidColorBrush MutedForeground { get; init; }
+            public required SolidColorBrush TextBoxBackground { get; init; }
             public required SolidColorBrush TextBoxBorder { get; init; }
-            public required SolidColorBrush BtnBg { get; init; }
-            public required SolidColorBrush BtnBorder { get; init; }
-            public required SolidColorBrush BtnHover { get; init; }
-            public required SolidColorBrush BtnDisabledBg { get; init; }
-            public required SolidColorBrush BtnDisabledFg { get; init; }
+            public required SolidColorBrush ButtonBackground { get; init; }
+            public required SolidColorBrush ButtonBorder { get; init; }
+            public required SolidColorBrush ButtonDisabledBackground { get; init; }
+            public required SolidColorBrush ButtonDisabledForeground { get; init; }
+            public required SolidColorBrush Accent { get; init; }
         }
     }
 }

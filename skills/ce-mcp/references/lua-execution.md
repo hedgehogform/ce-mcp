@@ -15,12 +15,12 @@ Useful searches:
 
 ```powershell
 rg -n -C 3 "synchronize|inMainThread|createThread|queue|checkSynchronize|processMessages" "C:\Program Files\Cheat Engine\celua.txt"
-rg -n -C 3 "AOBScan|createMemScan|FoundList|waitTillDone|debug_setBreakpoint|autoAssemble" "C:\Program Files\Cheat Engine\celua.txt"
+rg -n -C 3 "AOBScan|createMemScan|Structure|loadTable|compile|debug_|dbvm_|autoAssemble" "C:\Program Files\Cheat Engine\celua.txt"
 ```
 
 ## When To Use It
 
-Use dedicated MCP tools first for processes, memory reads/writes, scans, symbols, disassembly, Auto Assembler, address-list entries, and debugger work.
+Use dedicated MCP tools first for processes, memory and pointers, scans, symbols/RTTI, structures, cheat tables, disassembly/analysis, injection, Auto Assembler, address-list entries, debugger, and DBVM work.
 
 Use `execute_lua` when:
 
@@ -29,7 +29,7 @@ Use `execute_lua` when:
 - You need a small one-off CE Lua query.
 - You need functionality documented in the installed Cheat Engine `celua.txt` but not exposed by ce-mcp tools.
 
-Do not use `execute_lua` for routine scans, direct memory writes, code injection, symbol work, disassembly, or address-list edits when a dedicated tool exists.
+Do not use `execute_lua` for routine memory/scan/pointer, structure, table, injection, symbol, debugger, DBVM, disassembly, or address-list workflows when a dedicated tool exists.
 
 ## Main Thread Rules
 
@@ -106,6 +106,7 @@ Prefer ce-mcp scan tools for `MemScan` workflows. They already handle the fragil
 If Lua must use CE scan APIs:
 
 - `AOBScan(...)` returns a StringList; copy the addresses you need, then free the list.
+- CE scan APIs are positional: do not drop empty strings, zero-valued alignment enums, or `false` flags when later arguments are supplied.
 - `createMemScan(...)` returns a MemScan object; call `waitTillDone()` after `firstScan`, `nextScan`, or `scan`.
 - `FoundList.initialize()` must happen after scanning is complete, and `FoundList.deinitialize()` should release result access when done.
 - Do not keep FoundList objects across next scans unless the CE docs for that exact workflow say it is safe.
@@ -113,7 +114,7 @@ If Lua must use CE scan APIs:
 
 ## Safety Rules
 
-- Ask before memory writes, `autoAssemble`, debugger breakpoints that alter execution, file operations, process control, or Lua that changes CE settings.
-- Avoid `os.execute`, arbitrary file deletion, network calls, or persistence unless the user explicitly requests it.
+- Ask before memory or physical-memory writes, allocation/protection changes, table/file operations, process launch/control, injection, compilation, remote execution, debugger execution changes, DBVM operations, `autoAssemble`, or Lua that changes CE settings.
+- Avoid host shell execution, arbitrary file deletion, clipboard/input automation, network calls, or persistence unless the user explicitly requests them; these are intentionally outside ce-mcp's dedicated tool surface.
 - Do not call `resetLuaState()` casually; `celua.txt` notes it creates a new Lua state without destroying the old one.
 - If a Lua script fails, report the exact error and the installed `celua.txt` path checked.

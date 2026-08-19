@@ -1,6 +1,6 @@
 ---
 name: ce-mcp
-description: Use this skill when an AI agent needs to connect to and operate the ce-mcp Cheat Engine MCP server; select and call its process, memory, scan, symbol, debugger, assembly, address-list, conversion, or Lua MCP tools; use Cheat Engine Lua through execute_lua; or record a local Cheat Engine install path so the agent can consult celua.txt and other CE runtime files.
+description: Use this skill to operate the ce-mcp Cheat Engine MCP server for processes, memory and pointers, scans, symbols and RTTI, Structure Dissect, cheat tables, disassembly, injection, debugger, DBVM, address-list, conversion, or Lua workflows; or to consult the installed Cheat Engine celua.txt.
 ---
 
 # CE MCP
@@ -17,7 +17,7 @@ Scope: this skill assumes ce-mcp is already installed or running. Its job is to 
 4. Choose a dedicated tool from `references/tool-catalog.md`.
 5. Read `references/lua-execution.md` before using `execute_lua` or writing Cheat Engine Lua.
 
-Memory, debugger, Lua, and assembly tools can change target process state. Ask for explicit confirmation before writes, code injection, debugger actions that affect execution, or broad destructive Lua.
+Memory and physical-memory writes, allocation/protection changes, file load/save, process creation, injection, remote execution, debugger control, DBVM, Lua, and assembly can change target or host state. Obtain explicit confirmation for the exact target and values immediately before consequential calls.
 
 ## Tool Selection
 
@@ -25,13 +25,15 @@ Read `references/tool-catalog.md` when choosing tools or building a workflow. Pr
 
 Default workflow:
 
-- Process: discover and open the target process first.
-- Symbols/modules: enumerate modules and resolve addresses before raw reads.
-- Scans: use `memory_scan`, `reset_memory_scan`, and `aob_scan`; avoid hand-written memscan Lua unless the tool surface is missing required behavior.
-- Memory: use `read_memory` and `write_memory` for direct reads/writes.
-- Code: use disassembly and assembly tools before Auto Assembler or Lua.
-- Debugger: use `dbg_*` tools for breakpoints, register reads, stepping, and "find what writes/accesses".
-- Lua: use `execute_lua` only as a fallback or for CE APIs not yet exposed as tools.
+- Process: inspect and open the intended target before target-memory work; treat `create_process` as an external launch.
+- Symbols/modules: enumerate modules, RTTI, and registered symbols; resolve expressions before strict-address tools.
+- Memory/pointers: use bounded reads, pointer chains, region operations, and direct-reference scans; distinguish them from CE Pointer Scanner.
+- Scans: use named independent scanners for automation, reset before a fresh first scan, and preserve empty/zero/false positional inputs.
+- Structures/tables: use Structure Dissect and .CT tools; remember that global structures and address-list records persist in saved tables.
+- Code/injection: generate and syntax-check scripts before execution; confirm injection, compilation, and remote calls.
+- Debugger: use `dbg_*` for breakpoints, hit tracking, thread/context inspection, stepping, and find-writes/accesses workflows.
+- DBVM: check `dbvm_status` first; physical writes and OS offload require explicit confirmation.
+- Lua: use `execute_lua` only when the dedicated surface cannot perform the operation.
 
 ## Lua Reference And Local CE Path
 

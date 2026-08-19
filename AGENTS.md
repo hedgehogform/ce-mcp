@@ -1,66 +1,118 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Project Overview
 
-This repository builds `ce-mcp.dll`, a Cheat Engine plugin that hosts an MCP server over Streamable HTTP. The root `CeMCP.sln` and `CeMCP.csproj` target `net10.0-windows`, WPF, and x64.
+`ce-mcp` builds `ce-mcp.dll`, an x64 Cheat Engine 7.6.2+ plugin that hosts a stateless MCP server over Streamable HTTP. It exposes process control, memory/pointer/scan, assembly/analysis, symbol/RTTI, Structure Dissect, cheat-table, injection, debugger, optional DBVM, address-list, conversion, and Lua operations. The plugin targets `net10.0-windows`, uses WPF for configuration, and embeds managed dependencies into one DLL.
 
-- `src/`: plugin implementation. `Plugin.cs` wires Cheat Engine menu integration, `McpServer.cs` hosts MCP, `ServerConfig.cs` handles config, and `SchemaTransform.cs` customizes tool schemas.
-- `src/Tools/`: MCP tool classes for process, memory, scan, debugger, symbols, Lua, assembly, and address-list operations.
-- `src/Views/` and `src/Models/`: WPF configuration UI.
-- `CESDK/`: git submodule containing the Cheat Engine Lua API wrapper.
-- `skills/ce-mcp/`: distributable AI skill for consuming this MCP server. Keep it aligned with the public tool surface.
-- `.github/workflows/`: Windows CI for Debug/Release DLL builds and SonarQube analysis.
-- Cheat Engine `celua.txt`: installed with Cheat Engine, commonly at `C:\Program Files\Cheat Engine\celua.txt`. Consult the installed file before changing CE/Lua bindings or Lua guidance.
+## Architecture & Data Flow
 
-## Build, Test, and Development Commands
+1. Cheat Engine loads the plugin through `CESDK`, which initializes shared Lua/native state and calls `McpPlugin.OnEnable`.
+2. `src/Plugin.cs` installs the `MCP` menu, loads `%APPDATA%\CeMCP\config.json`, applies `MCP_HOST`/`MCP_PORT` overrides, and starts the WPF configuration UI or server.
+3. `src/McpServer.cs` builds the ASP.NET Core host, registers tool classes, and maps the stateless Streamable HTTP endpoint.
+4. A method in `src/Tools/` validates an MCP request, marshals Cheat Engine work to the main GUI thread, and calls a typed `CESDK` facade.
+5. `CESDK/src/Classes/` calls the CE Lua API through `LuaUtils`/`LuaNative`; tools return JSON-visible `{ success = true, ... }` or `{ success = false, error }` objects.
+
+Dependency direction is `MCP tool -> CESDK typed facade -> LuaUtils/LuaNative -> Cheat Engine`. ASP.NET Core may handle concurrent requests, but CE Lua state and engine objects are not thread-safe: serialize CE-facing work with `ToolThread.OnMainThread(...)`. Keep process-attached checks and the subsequent operation in the same main-thread block.
+
+State is deliberately centralized: static `ServerConfig`, shared `PluginContext.Lua`, server fields on `McpPlugin`/`McpServer`, and named scanner state in `ScanTool`. Scanner/found-list lifecycles are order-sensitive: deinitialize old results, run the scan, call `WaitTillDone()`, initialize results, then read them.
+
+## Key Directories
+
+- `src/`: plugin lifecycle, MCP host, schema transforms, configuration, and WPF application code.
+- `src/Tools/`: client-facing MCP tool adapters grouped by CE capability.
+- `src/Models/`, `src/Views/`: WPF configuration state and UI.
+- `CESDK/src/`: submodule-provided native plugin bootstrap, Lua interop, and typed CE wrappers compiled into the plugin.
+- `tests/CeMCP.Tests/Unit/`: deterministic tests that do not require Cheat Engine.
+- `tests/CeMCP.Tests/Live/`: opt-in tests against a running CE-hosted MCP server.
+- `CESDK/tests/`: separate CE-loaded live-test plugin and report-validating MSTest host.
+- `skills/ce-mcp/`: distributable AI skill that must track the public MCP surface.
+- `.github/workflows/`: Windows build/artifact and SonarCloud pipelines.
+
+## Development Commands
+
+Run from the repository root in PowerShell:
 
 ```powershell
 git submodule update --init --recursive
 dotnet restore
 dotnet build
-dotnet test
+dotnet test --filter "TestCategory!=Live"
 dotnet build -c Release
 ```
 
-`dotnet build` creates `bin/x64/Debug/net10.0-windows/ce-mcp.dll`; Release outputs the same path under `Release`. `dotnet test` runs the MSTest.Sdk/Microsoft.Testing.Platform tests that do not require Cheat Engine. To test manually, copy the DLL into the Cheat Engine plugins directory, enable it in Cheat Engine 7.6.2+, start the MCP server from the `MCP` menu, and connect a client to `http://localhost:6300/`.
+CI-equivalent build sequence:
 
-## Coding Style & Naming Conventions
+```powershell
+dotnet restore
+dotnet build -c Debug --no-restore
+dotnet test -c Debug --no-restore --no-build --filter "TestCategory!=Live"
+dotnet build -c Release --no-restore
+```
 
-Use C# with nullable reference types enabled and warnings treated as errors. Match existing 4-space indentation, brace style, XML summaries on public wrapper APIs, and concise comments for CE/Lua edge cases. MCP tools should be `public class` types with a private constructor and static methods decorated with `[McpServerTool]`; do not convert them to `static class`. Return structured objects with `success` plus result data or `error`.
+Debug output is `bin/x64/Debug/net10.0-windows/ce-mcp.dll`; Release uses the corresponding `Release` directory. There is no repository lint or formatter command. SonarCloud is the configured static-analysis gate.
 
-## MCP Schema & CE Threading Notes
+Manual run: copy the built DLL to Cheat Engine's plugins directory, restart CE, enable the plugin, choose `MCP` -> start server, and connect to `http://localhost:6300/` by default. This is a plugin, not a standalone application.
 
-PR #18 fixed a client-breaking schema issue: optional nullable tool parameters such as `int?`, `string?`, and `bool?` generated JSON schema like `"type": ["integer", "null"]`, which Anthropic-API MCP clients reject with a 400. Register every tool class through `WithToolsAndSchemaTransform<T>()`, not the SDK's plain `WithTools<T>()`, so `SchemaTransform.SchemaCreateOptions` can collapse nullable type arrays to the non-null scalar type. Optional parameters are already omitted from `required`, so this preserves behavior while keeping schemas compatible.
+## Code Conventions & Common Patterns
 
-Keep `SchemaTransform` handling for oversized numeric schema keywords. Defaults or bounds such as `ulong.MaxValue` can serialize beyond signed 64-bit and trigger Anthropic converter errors like "int too big to convert"; remove or avoid those schema hints, and prefer signed-64-safe defaults such as `0x7FFFFFFFFFFFFFFF` for scan ranges.
+- Use C# with 4-space indentation, nullable reference types, warnings as errors, and the existing brace style. Add XML summaries to public wrapper APIs; keep comments focused on CE/Lua edge cases.
+- MCP tool containers are `public class` types with `[McpServerToolType]` and a private constructor. Tool methods are synchronous static `object` methods decorated with `[McpServerTool(Name = "snake_case")]`; describe every public parameter.
+- Register every tool class explicitly in `McpServer.Start` with `WithToolsAndSchemaTransform<T>()`. Never use plain `WithTools<T>()`: `SchemaTransform` removes nullable type arrays and oversized numeric schema keywords that break some MCP clients.
+- Validate required inputs before native calls. Return anonymous structured objects with `success` and result fields, or `success = false` plus `error`. Catch operational exceptions at the tool boundary; CESDK wrappers translate lower-level failures to domain-specific exceptions.
+- Use `ToolThread.OnMainThread(...)` for new CE-facing tool bodies. Follow a subsystem's established pattern when modifying older scan, address-list, Lua, or debugger code; do not casually move CE work onto HTTP worker threads.
+- Prefer typed CESDK facades such as `MemoryAccess`, `MemScan`, `Assembler`, and `SymbolManager`. Use `execute_lua` only when no dedicated tool fits, and consult the installed Cheat Engine `celua.txt` before changing Lua bindings or guidance.
+- Format addresses as uppercase hexadecimal (`0x{value:X}`). Use strict `AddressParser` where only hex is accepted and `AddressResolver` where symbols are supported.
+- Preserve local response-field conventions. Most tools use camelCase; debugger responses intentionally include snake_case fields.
+- Server start/stop is asynchronous; tool operations generally are not. The configuration window owns a separate STA thread and WPF `Dispatcher`.
+- Configuration precedence is defaults (`127.0.0.1:6300`) < `%APPDATA%\CeMCP\config.json` < `MCP_HOST`/`MCP_PORT`.
+- Route CESDK and ASP.NET Core logging through the isolated NLog factory in `CESDK/src/PluginLogger.cs`. The only log path is `%APPDATA%\CeMCP\ce-mcp.log`; do not add direct file loggers or alternate fallback paths.
+- Tool-surface, parameter, scan/debugger, Lua, threading, or installed-path changes must also update relevant files under `skills/ce-mcp/`, especially `SKILL.md`, `references/tool-catalog.md`, and `references/lua-execution.md`.
+- Memory/physical-memory writes, process control, file operations, injection, assembly/compilation, debugger control, DBVM, and arbitrary Lua can alter a target or host. Keep server defaults loopback-only unless the change explicitly requires otherwise.
 
-CE SDK, Lua, scanner/foundlist, symbol, disassembler, Auto Assembler, conversion, process, memory, and address-list operations should run on Cheat Engine's main GUI thread. Use `ToolThread.OnMainThread(...)` for new tool bodies unless there is a clear reason to do otherwise; it wraps `Synchronize` and normalizes exceptions. Keep process-attached checks and subsequent CE work inside the same main-thread block when possible to avoid races where the target detaches between the check and operation. `execute_lua` already marshals `LuaExecutor.Execute` through `Synchronize`.
+## Important Files
 
-## Skill Maintenance
+- `CeMCP.sln`: root x64 Debug/Release solution.
+- `CeMCP.csproj`: target framework, WPF/ASP.NET references, MCP and Costura packages, CESDK source inclusion, and skill-output copying.
+- `global.json`: pins .NET SDK `10.0.102`, Microsoft.Testing.Platform, and MSTest.Sdk `4.2.3`.
+- `src/Plugin.cs`: CE lifecycle, menu integration, server ownership, config precedence, and WPF thread startup.
+- `src/McpServer.cs`: HTTP/MCP composition root and explicit tool registration.
+- `src/SchemaTransform.cs`: required MCP schema compatibility transform.
+- `src/ServerConfig.cs`: defaults, persistent config, and environment overrides.
+- `src/Tools/ToolThread.cs`: CE GUI-thread boundary and normalized error handling.
+- `src/Tools/ScanTool.cs`: stateful scanner/found-list sequencing.
+- `CESDK/src/CESDK.cs`: native CE bootstrap and synchronization bridge.
+- `CESDK/src/Utils/LuaUtils.cs`: managed-to-Lua calls, stack cleanup, and result extraction.
+- `README.md`: installation, runtime prerequisites, and live/manual test setup.
+- `.github/workflows/build-dlls.yml`: canonical CI build/test/artifact steps.
 
-When changing MCP tools, server registration, tool parameters/defaults, scan behavior, debugger behavior, Lua execution, CE threading assumptions, or installed Cheat Engine path handling, update the repo skill in `skills/ce-mcp/` in the same change. At minimum check:
+## Runtime/Tooling Preferences
 
-- `skills/ce-mcp/SKILL.md`: high-level workflows, safety rules, and local Cheat Engine path instructions.
-- `skills/ce-mcp/references/tool-catalog.md`: tool names, categories, parameters, defaults, and recommended workflows.
-- `skills/ce-mcp/references/lua-execution.md`: Lua API lookup, `execute_lua`, `Synchronize`/main-thread guidance, scanner/foundlist lifecycle, and safety notes.
-- `skills/ce-mcp/agents/openai.yaml`: update only when display metadata or default prompt should change.
-
-Do not commit `skills/ce-mcp/references/local-cheat-engine.md`; it is machine-local state that agents may update by editing the Markdown file directly after verifying the user's Cheat Engine install path. After skill edits, run the skill validator if available:
+- Required platform: Windows x64. The root project targets `net10.0-windows` and uses C# `latest`.
+- Required runtimes: .NET 10 SDK for development; .NET 10 Desktop and ASP.NET Core runtimes for Cheat Engine hosting. CE's `ce.runtimeconfig.json` may also need its framework entries updated from .NET 9 to .NET 10.
+- Package management uses NuGet `PackageReference` plus the SDK pinned in `global.json`; there is no central package file or lock file.
+- Initialize `CESDK/` recursively before restore/build. Treat it as a submodule integration layer, not ordinary generated source.
+- Costura.Fody embeds managed dependencies in `ce-mcp.dll`. `CeMCP.csproj` copies `skills/ce-mcp/` beside the DLL; do not edit generated copies under `bin/`.
+- Do not commit `skills/ce-mcp/references/local-cheat-engine.md`; it is machine-local. Use the installed `celua.txt` as the source of truth for CE Lua APIs.
+- If available, validate skill edits with:
 
 ```powershell
 python C:\Users\Shadow\.codex\skills\.system\skill-creator\scripts\quick_validate.py skills/ce-mcp
 ```
 
-`CeMCP.csproj` copies the distributable skill files to the build output beside `ce-mcp.dll` under `skills/ce-mcp/`; the skill must not be embedded into the DLL. Keep `local-cheat-engine.md` and other machine-local files excluded from copied output, and keep GitHub Actions artifact uploads bundling the output skill folder together with the DLL.
+## Testing & QA
 
-## Testing Guidelines
+Tests use MSTest.Sdk on Microsoft.Testing.Platform. Use `[TestClass]`/`[TestMethod]`, behavior-oriented `Subject_Condition_Outcome` names, `[DataRow]` for tables, and deterministic assertions with diagnostic messages. Tests that mutate environment variables or static delegates must be `[DoNotParallelize]` and restore state during cleanup.
 
-Automated tests live in `tests/CeMCP.Tests/` and use `MSTest.Sdk` on Microsoft.Testing.Platform. Normal CE-free tests live in `tests/CeMCP.Tests/Unit/` and cover deterministic behavior such as schema transforms, MCP tool metadata contracts, server config environment overrides, tool input validation/result shaping, and skill bundle rules. Shared test helpers live in `tests/CeMCP.Tests/Support/`. Run `dotnet test` before submitting changes, and run `dotnet build -c Release` when packaging output matters. Live MCP integration tests live in `tests/CeMCP.Tests/Live/` and are opt-in: load the built DLL into Cheat Engine, start the MCP server, set `CE_MCP_LIVE=1`, optionally set `CE_MCP_URL`, then run `dotnet test --filter TestCategory=Live`. Keep default live tests limited to safe inspection calls unless a test clearly documents target-process setup and risk. For CE-facing changes, also perform a manual plugin smoke test and document which MCP tools or CE menu flows were exercised. For scans, preserve the scan, `WaitTillDone()`, and results initialization sequence.
+- Normal CE-free QA: `dotnet test --filter "TestCategory!=Live"`.
+- Bare `dotnet test` is safe without CE because live tests become inconclusive, but CI uses the explicit non-live filter.
+- Add unit coverage for deterministic contracts such as schema transforms, config precedence, metadata, validation, result shapes, and skill packaging. Use narrow injectable boundaries rather than mocking CE wholesale.
+- `tests/CeMCP.Tests/Support/ToolResultAssert.cs` checks anonymous tool response shapes.
+- Live MCP tests require the freshly built plugin loaded and server running, then:
 
-## Commit & Pull Request Guidelines
+```powershell
+$env:CE_MCP_LIVE = "1"
+$env:CE_MCP_URL = "http://localhost:6300/" # optional
+dotnet test --filter TestCategory=Live
+```
 
-Use short, imperative commit subjects, following the existing history style: `Run scans and Lua on CE main thread to stop crashes`, `Bump version to 1.0.1`. Pull requests should describe the changed tool or wrapper, list manual CE verification, link issues when available, and include screenshots for WPF UI changes.
-
-## Security & Runtime Notes
-
-Memory, debugger, Lua, and assembly tools can alter target processes. Keep server defaults loopback-only unless intentionally changing configuration. Persistent config lives under `%APPDATA%\CeMCP\config.json`; `MCP_HOST` and `MCP_PORT` override it.
+Live tests are `[TestCategory("Live")]` and nonparallel. Default coverage is read-only; scan regressions require an already attached readable target or become inconclusive. `NotepadMcpTests` additionally requires `CE_MCP_NOTEPAD_LIVE=1`, launches/discovers a disposable Notepad process, asserts every live tool is attempted or explicitly excluded, and restores owned state. The CESDK harness skips target-dependent checks until a disposable process is attached; run them from `CESDK Tests` -> `Run Tests Against Attached Process`. Set `CESDK_LIVE_MUTATING=1` before launching CE for wrapper mutations; `CESDK_LIVE_TARGET_PID` is optional unattended attachment. Target-specific writes, debugger actions, file operations, or execution changes must remain explicitly opt-in and document setup.

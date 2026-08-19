@@ -49,6 +49,8 @@
   <ItemGroup>
     <PackageReference Include="Costura.Fody" Version="6.2.0" PrivateAssets="all" />
     <PackageReference Include="Fody" Version="6.9.3" PrivateAssets="all" />
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.0" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.1.0" />
+    <PackageReference Include="NLog" Version="6.1.4" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="6.1.4" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
 using CEMCP;
+using CEMCP.Models;
 
 namespace CeMCP.Tests;
 
@@ -49,5 +50,56 @@ public sealed class ServerConfigTests
         ServerConfig.LoadFromEnvironment();
 
         Assert.AreEqual(6300, ServerConfig.ConfigPort);
+    }
+
+    [TestMethod]
+    [DataRow("0")]
+    [DataRow("65536")]
+    [DataRow("-1")]
+    public void LoadFromEnvironment_OutOfRangePort_KeepsCurrentValue(string value)
+    {
+        ServerConfig.ConfigPort = 6300;
+        Environment.SetEnvironmentVariable("MCP_PORT", value);
+
+        ServerConfig.LoadFromEnvironment();
+
+        Assert.AreEqual(6300, ServerConfig.ConfigPort);
+    }
+
+    [TestMethod]
+    public void ConfigurationModel_BaseUrl_UsesCanonicalRootEndpoint()
+    {
+        var model = new ConfigurationModel
+        {
+            Host = "localhost",
+            Port = 6400,
+        };
+
+        Assert.AreEqual("http://localhost:6400/", model.BaseUrl);
+    }
+
+    [TestMethod]
+    [DataRow("", 6300, "server", "Host")]
+    [DataRow("not/a/host", 6300, "server", "Host")]
+    [DataRow("localhost", 0, "server", "Port")]
+    [DataRow("localhost", 65536, "server", "Port")]
+    [DataRow("localhost", 6300, " ", "ServerName")]
+    public void ConfigurationModel_InvalidSettings_RejectsBeforeSaving(
+        string host,
+        int port,
+        string serverName,
+        string expectedParameter)
+    {
+        var model = new ConfigurationModel
+        {
+            Host = host,
+            Port = port,
+            ServerName = serverName,
+        };
+
+        ArgumentException exception = Assert.Throws<ArgumentException>(
+            model.SaveToServerConfig);
+
+        Assert.AreEqual(expectedParameter, exception.ParamName);
     }
 }

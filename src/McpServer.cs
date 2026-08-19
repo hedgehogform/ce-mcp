@@ -1,10 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CESDK;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NLog.Extensions.Logging;
 
 namespace CEMCP
 {
@@ -20,9 +22,15 @@ namespace CEMCP
             var builder = WebApplication.CreateBuilder(new WebApplicationOptions
             {
                 Args = [],
+                ApplicationName = typeof(McpServer).Assembly.GetName().Name,
                 ContentRootPath = System.IO.Path.GetTempPath(),
                 WebRootPath = System.IO.Path.GetTempPath()
             });
+
+            builder.Logging.ClearProviders();
+            builder.Logging.AddNLog(
+                new NLogProviderOptions { ShutdownOnDispose = false },
+                _ => PluginLogger.Factory);
 
             // Setup MCP server with Streamable HTTP transport and all tools
             builder.Services.AddMcpServer(options =>
@@ -48,9 +56,17 @@ namespace CEMCP
             .WithToolsAndSchemaTransform<Tools.AutoAssemblyTool>()
             .WithToolsAndSchemaTransform<Tools.MemoryViewTool>()
             .WithToolsAndSchemaTransform<Tools.SymbolTool>()
-            .WithToolsAndSchemaTransform<Tools.DebuggerTool>();
+            .WithToolsAndSchemaTransform<Tools.DebuggerTool>()
+            .WithToolsAndSchemaTransform<Tools.AdvancedMemoryTool>()
+            .WithToolsAndSchemaTransform<Tools.PointerTool>()
+            .WithToolsAndSchemaTransform<Tools.ProcessControlTool>()
+            .WithToolsAndSchemaTransform<Tools.CheatTableTool>()
+            .WithToolsAndSchemaTransform<Tools.StructureTool>()
+            .WithToolsAndSchemaTransform<Tools.InjectionTool>()
+            .WithToolsAndSchemaTransform<Tools.AnalysisTool>()
+            .WithToolsAndSchemaTransform<Tools.SymbolRegistryTool>()
+            .WithToolsAndSchemaTransform<Tools.DbvmTool>();
 
-            builder.Logging.ClearProviders(); // Disable logging
             builder.WebHost.UseUrls(baseUrl);
 
             // Build app

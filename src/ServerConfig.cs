@@ -26,8 +26,12 @@ namespace CEMCP
                 ConfigHost = hostEnv;
 
             var portEnv = Environment.GetEnvironmentVariable("MCP_PORT");
-            if (!string.IsNullOrEmpty(portEnv) && int.TryParse(portEnv, out int port))
+            if (!string.IsNullOrEmpty(portEnv) &&
+                int.TryParse(portEnv, out int port) &&
+                port is >= 1 and <= 65535)
+            {
                 ConfigPort = port;
+            }
         }
 
         public static void LoadFromFile()
@@ -41,41 +45,32 @@ namespace CEMCP
                     if (config != null)
                     {
                         ConfigHost = config.Host ?? ConfigHost;
-                        ConfigPort = config.Port > 0 ? config.Port : ConfigPort;
+                        ConfigPort = config.Port is >= 1 and <= 65535 ? config.Port : ConfigPort;
                         ConfigServerName = config.ServerName ?? ConfigServerName;
                     }
                 }
             }
             catch
             {
-                // Hi error
-                // If loading fails, use defaults
-                // Goodbye error
+                // Keep the current defaults when the persisted file cannot be read.
             }
         }
 
         public static void SaveToFile()
         {
-            try
-            {
-                var configDir = Path.GetDirectoryName(ConfigFilePath);
-                if (configDir != null && !Directory.Exists(configDir))
-                    Directory.CreateDirectory(configDir);
+            string configDir = Path.GetDirectoryName(ConfigFilePath)
+                ?? throw new InvalidOperationException("Could not resolve the configuration directory.");
+            Directory.CreateDirectory(configDir);
 
-                var config = new ConfigData
-                {
-                    Host = ConfigHost,
-                    Port = ConfigPort,
-                    ServerName = ConfigServerName
-                };
-
-                var json = JsonSerializer.Serialize(config, SourceGenerationContext.Default.ConfigData);
-                File.WriteAllText(ConfigFilePath, json);
-            }
-            catch
+            var config = new ConfigData
             {
-                // Ignore save errors for now
-            }
+                Host = ConfigHost,
+                Port = ConfigPort,
+                ServerName = ConfigServerName
+            };
+
+            string json = JsonSerializer.Serialize(config, SourceGenerationContext.Default.ConfigData);
+            File.WriteAllText(ConfigFilePath, json);
         }
 
         internal sealed class ConfigData

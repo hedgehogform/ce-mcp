@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -58,13 +59,12 @@ namespace CEMCP.Models
             }
         }
 
-        public string BaseUrl => $"http://{Host}:{Port}";
-
-        public string SseUrl => $"{BaseUrl}/sse";
+        public string BaseUrl => $"http://{Host}:{Port}/";
 
         public string Version => _version;
+        public bool CanEditConfiguration => !IsServerRunning;
 
-        public string StartStopButtonText => ServerStatus.Equals("running", System.StringComparison.CurrentCultureIgnoreCase) ? "Stop Server" : "Start Server";
+        public string StartStopButtonText => ServerStatus.Equals("running", System.StringComparison.OrdinalIgnoreCase) ? "Stop Server" : "Start Server";
 
         public bool IsServerRunning
         {
@@ -75,6 +75,7 @@ namespace CEMCP.Models
                 {
                     _isServerRunning = value;
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(CanEditConfiguration));
                 }
             }
         }
@@ -146,6 +147,23 @@ namespace CEMCP.Models
 
         public void SaveToServerConfig()
         {
+            string host = Host.Trim();
+            string unwrappedHost = host.Length >= 2 && host[0] == '[' && host[^1] == ']'
+                ? host[1..^1]
+                : host;
+            if (Uri.CheckHostName(unwrappedHost) == UriHostNameType.Unknown)
+                throw new ArgumentException("Enter a valid host name or IP address.", nameof(Host));
+            if (Port is < 1 or > 65535)
+                throw new ArgumentOutOfRangeException(nameof(Port), "Port must be between 1 and 65535.");
+
+            string serverName = ServerName.Trim();
+            if (serverName.Length == 0)
+                throw new ArgumentException("Server name is required.", nameof(ServerName));
+
+            Host = Uri.CheckHostName(unwrappedHost) == UriHostNameType.IPv6
+                ? $"[{unwrappedHost}]"
+                : unwrappedHost;
+            ServerName = serverName;
             ServerConfig.ConfigHost = Host;
             ServerConfig.ConfigPort = Port;
             ServerConfig.ConfigServerName = ServerName;
@@ -154,35 +172,30 @@ namespace CEMCP.Models
 
         private void UpdateStatusColor()
         {
-            string lowerStatus = _serverStatus.ToLower();
-
-            if (lowerStatus == "running")
+            if (_serverStatus.Equals("running", System.StringComparison.OrdinalIgnoreCase))
             {
-                // Light green for dark mode, standard green for light mode
-                ServerStatusColor = _isDarkMode ?
-                    new SolidColorBrush(Color.FromRgb(76, 175, 80)) :
-                    new SolidColorBrush(Color.FromRgb(0, 128, 0));
+                ServerStatusColor = _isDarkMode
+                    ? new SolidColorBrush(Color.FromRgb(76, 175, 80))
+                    : new SolidColorBrush(Color.FromRgb(0, 128, 0));
             }
-            else if (lowerStatus == "stopped")
+            else if (_serverStatus.Equals("stopped", System.StringComparison.OrdinalIgnoreCase))
             {
-                // Light red for dark mode, standard red for light mode
-                ServerStatusColor = _isDarkMode ?
-                    new SolidColorBrush(Color.FromRgb(244, 67, 54)) :
-                    new SolidColorBrush(Color.FromRgb(255, 0, 0));
+                ServerStatusColor = _isDarkMode
+                    ? new SolidColorBrush(Color.FromRgb(244, 67, 54))
+                    : new SolidColorBrush(Color.FromRgb(196, 43, 28));
             }
-            else if (lowerStatus == "starting" || lowerStatus == "stopping")
+            else if (_serverStatus.Equals("starting", System.StringComparison.OrdinalIgnoreCase) ||
+                     _serverStatus.Equals("stopping", System.StringComparison.OrdinalIgnoreCase))
             {
-                // Light orange for dark mode, standard orange for light mode
-                ServerStatusColor = _isDarkMode ?
-                    new SolidColorBrush(Color.FromRgb(255, 152, 0)) :
-                    new SolidColorBrush(Color.FromRgb(255, 165, 0));
+                ServerStatusColor = _isDarkMode
+                    ? new SolidColorBrush(Color.FromRgb(255, 152, 0))
+                    : new SolidColorBrush(Color.FromRgb(184, 104, 0));
             }
             else
             {
-                // Light gray for dark mode, standard gray for light mode
-                ServerStatusColor = _isDarkMode ?
-                    new SolidColorBrush(Color.FromRgb(158, 158, 158)) :
-                    new SolidColorBrush(Color.FromRgb(128, 128, 128));
+                ServerStatusColor = _isDarkMode
+                    ? new SolidColorBrush(Color.FromRgb(158, 158, 158))
+                    : new SolidColorBrush(Color.FromRgb(96, 96, 96));
             }
         }
 

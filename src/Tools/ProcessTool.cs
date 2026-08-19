@@ -82,6 +82,8 @@ namespace Tools
                     if (!processDict.ContainsKey(pid))
                         return new { success = false, error = $"Process with ID {pid} not found" };
 
+                    if (Process.GetOpenedProcessID() != pid)
+                        ScanTool.ResetForProcessChange();
                     Process.OpenProcess(pid);
                     return new { success = true };
                 }
@@ -92,6 +94,8 @@ namespace Tools
                 if (target.Key == 0)
                     return new { success = false, error = $"Process with name '{process}' not found" };
 
+                if (Process.GetOpenedProcessID() != target.Key)
+                    ScanTool.ResetForProcessChange();
                 Process.OpenProcess(target.Key);
                 return new { success = true };
             });
@@ -104,7 +108,7 @@ namespace Tools
             {
                 int processId = Process.GetOpenedProcessID();
 
-                if (processId == 0)
+                if (processId <= 0)
                     return new { success = true, isOpen = false, message = "No process is currently attached" };
 
                 string processName = "Unknown";
@@ -117,8 +121,7 @@ namespace Tools
                 catch (Exception) { /* process list unavailable, name stays "Unknown" */ }
 
                 var threadList = new ThreadList();
-                threadList.Refresh();
-                var threads = threadList.GetAllThreadIds();
+                var threads = threadList.GetAllThreadIdsAsInt();
 
                 return new { success = true, isOpen = true, processId, processName, threads };
             });

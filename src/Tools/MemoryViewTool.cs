@@ -33,6 +33,7 @@ namespace Tools
 
                 if (count < 1) count = 1;
                 if (count > 200) count = 200;
+                RequireAttachedProcess();
 
                 // Resolve address - supports symbols
                 var resolvedAddr = AddressResolver.GetAddressSafe(address);
@@ -50,6 +51,8 @@ namespace Tools
 
                     var parsed = Disassembler.SplitDisassembledString(disasm);
                     var size = Disassembler.GetInstructionSize(currentAddr);
+                    if (size <= 0)
+                        break;
                     var comment = Disassembler.GetComment(currentAddr);
 
                     instructions.Add(new
@@ -62,7 +65,7 @@ namespace Tools
                         size
                     });
 
-                    currentAddr += (ulong)size;
+                    currentAddr = ulong.MaxValue - currentAddr < (ulong)size ? ulong.MaxValue : currentAddr + (ulong)size;
                 }
 
                 var symbolName = AddressResolver.GetNameFromAddress(resolvedAddr.Value);
@@ -86,6 +89,7 @@ namespace Tools
             {
                 if (string.IsNullOrWhiteSpace(address))
                     return new { success = false, error = AddressRequired };
+                RequireAttachedProcess();
 
                 var resolvedAddr = AddressResolver.GetAddressSafe(address);
                 if (!resolvedAddr.HasValue)
@@ -119,7 +123,9 @@ namespace Tools
                 if (!string.IsNullOrEmpty(address))
                 {
                     var resolved = AddressResolver.GetAddressSafe(address);
-                    if (resolved.HasValue) addr = resolved.Value;
+                    if (!resolved.HasValue)
+                        return new { success = false, error = $"Could not resolve address: {address}" };
+                    addr = resolved.Value;
                 }
 
                 var result = Disassembler.DisassembleBytes(hexBytes, addr);
@@ -136,6 +142,7 @@ namespace Tools
             {
                 if (string.IsNullOrWhiteSpace(address))
                     return new { success = false, error = AddressRequired };
+                RequireAttachedProcess();
 
                 if (count < 1) count = 1;
                 if (count > 50) count = 50;
@@ -149,7 +156,10 @@ namespace Tools
                 ulong currentAddr = resolvedAddr.Value;
                 for (int i = 0; i < count; i++)
                 {
-                    currentAddr = Disassembler.GetPreviousOpcode(currentAddr);
+                    ulong previous = Disassembler.GetPreviousOpcode(currentAddr);
+                    if (previous >= currentAddr)
+                        break;
+                    currentAddr = previous;
                     prevAddresses.Add(currentAddr);
                 }
 
@@ -184,9 +194,13 @@ namespace Tools
         {
             return ToolThread.OnMainThread(() =>
             {
+                string? normalizedFilter = filter?.ToLowerInvariant();
+                if (normalizedFilter is not ("committed" or "reserved" or "free" or "all"))
+                    return new { success = false, error = "Filter must be committed, reserved, free, or all" };
+                RequireAttachedProcess();
                 var regions = MemoryRegions.EnumMemoryRegions();
 
-                var filtered = filter?.ToLower() switch
+                var filtered = normalizedFilter switch
                 {
                     "all" => regions,
                     "reserved" => regions.Where(r => r.State == 0x2000).ToList(),
@@ -216,6 +230,7 @@ namespace Tools
             {
                 if (string.IsNullOrWhiteSpace(address))
                     return new { success = false, error = AddressRequired };
+                RequireAttachedProcess();
 
                 var resolvedAddr = AddressResolver.GetAddressSafe(address);
                 if (!resolvedAddr.HasValue)
@@ -242,6 +257,7 @@ namespace Tools
             {
                 if (string.IsNullOrWhiteSpace(address))
                     return new { success = false, error = AddressRequired };
+                RequireAttachedProcess();
 
                 var resolvedAddr = AddressResolver.GetAddressSafe(address);
                 if (!resolvedAddr.HasValue)
@@ -250,6 +266,12 @@ namespace Tools
                 Disassembler.SetComment(resolvedAddr.Value, comment);
                 return new { success = true, address = $"0x{resolvedAddr.Value:X}" };
             });
+        }
+
+        private static void RequireAttachedProcess()
+        {
+            if (CESDK.Classes.Process.GetOpenedProcessID() <= 0)
+                throw new InvalidOperationException("No process is attached. Open a process first.");
         }
 
         private static string ProtectToString(int protect)

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.ComponentModel;
 using CESDK.Classes;
 using ModelContextProtocol.Server;
@@ -17,6 +19,12 @@ namespace Tools
 
         private const string InvalidAddressMsg = "Invalid address format";
         private const string DefaultDataType = "int32";
+        private static readonly HashSet<string> ValidRegisterNames =
+        [
+            "EAX", "EBX", "ECX", "EDX", "ESI", "EDI", "EBP", "ESP", "EIP",
+            "RAX", "RBX", "RCX", "RDX", "RSI", "RDI", "RBP", "RSP", "RIP",
+            "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15", "EFLAGS"
+        ];
 
         // Lua IIFE: builds a register table from the current debug context.
         // Caller must already have invoked debug_getContext(false).
@@ -68,6 +76,8 @@ end)()";
             [Description("Debugger interface to use: 0=default, 1=windows, 2=VEH, 3=kernel")] int debugInterface = 0)
             => SafeRun(() =>
             {
+                if (debugInterface is < 0 or > 3)
+                    return new { success = false, error = "debugInterface must be between 0 and 3" };
                 Debugger.DebugProcess(debugInterface);
                 return new { success = true, message = "Debugger attached" };
             });
@@ -123,13 +133,15 @@ end)()";
             [Description("When true, installs a hit-tracking callback that auto-continues and records instruction+registers per hit")] bool trackHits = false)
             => SafeRunWithAddress(address, addr =>
             {
-                string ceTrigger = trigger.ToLower() switch
+                string ceTrigger = trigger.ToLowerInvariant() switch
                 {
                     "write" => "bptWrite",
                     "access" => "bptAccess",
                     "execute" or "exec" => "bptExecute",
                     _ => throw new ArgumentException($"Unknown trigger '{trigger}'. Use 'execute', 'write', or 'access'")
                 };
+                if (size is not 1 and not 2 and not 4 and not 8)
+                    throw new ArgumentException("Size must be 1, 2, 4, or 8");
 
                 if (trackHits)
                 {
@@ -153,7 +165,7 @@ debug_setBreakpoint({addr}, {size}, {ceTrigger}, function()
     debug_continueFromBreakpoint(co_run)
     return 1
 end)
-return 'ok'";
+return true";
                     LuaExecutor.Execute(script);
                     return new
                     {
@@ -165,7 +177,6 @@ return 'ok'";
                     };
                 }
 
-                // Simple breaking breakpoint (no callback).
                 Debugger.SetBreakpoint(addr, size, ceTrigger);
                 return new
                 {
@@ -226,6 +237,8 @@ return 'ok'";
             [Description("Maximum number of hits to return (newest first). 0 = return all.")] int maxHits = 0)
             => SafeRunWithAddress(address, addr =>
             {
+                if (maxHits < 0)
+                    return new { success = false, error = "maxHits must not be negative" };
                 string script = $@"
 if __mcp_bp_hits == nil then return {{}} end
 local addrHex = string.format('%016X', {addr})
@@ -267,12 +280,8 @@ return 'ok'";
             "The debugger must be broken (dbg_is_broken = true) for this to return meaningful values. " +
             "Returns instruction pointer (RIP/EIP), all GPRs, stack pointer, and base pointer. " +
             "For 64-bit targets returns RAX–R15, RIP, RSP, RBP. For 32-bit returns EAX–EDI, EIP, ESP, EBP.")]
-        public static object DbgGpregs()
-            => SafeRun(() =>
-            {
-                Debugger.GetContext(false);
-                return ReadRegisters();
-            });
+        public static object DbgGpregs() =>
+            SafeRun(() => ReadRegisters(extraRegisters: false));
 
         [McpServerTool(Name = "dbg_gpregs_remote"), Description(
             "Read general-purpose registers via a Lua script call to debug_getContext. " +
@@ -294,29 +303,26 @@ return {LuaBuildRegTable}";
 
         [McpServerTool(Name = "dbg_regs_all"), Description(
             "Read all registers including FP0–FP7 and XMM0–XMM15 from the broken thread's context.")]
-        public static object DbgRegsAll()
-            => SafeRun(() =>
-            {
-                Debugger.GetContext(true);
-                return ReadRegisters();
-            });
+        public static object DbgRegsAll() =>
+            SafeRun(() => ReadRegisters(extraRegisters: true));
 
         [McpServerTool(Name = "dbg_regs_named"), Description(
             "Read specific named registers from the broken thread's context. " +
             "Provide a comma-separated list of register names, e.g. 'RAX,RBX,RIP' or 'EAX,EIP'.")]
         public static object DbgRegsNamed(
-            [Description("Comma-separated register names (e.g. 'RAX,RBX,RIP' or 'EAX,EBX,EIP')")] string registerNames)
-            => SafeRun(() =>
+            [Description("Comma-separated register names (e.g. 'RAX,RBX,RIP' or 'EAX,EBX,EIP')")] string registerNames) =>
+            SafeRun(() =>
             {
-                Debugger.GetContext(false);
-                var names = registerNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                var regs = new Dictionary<string, string>();
-                foreach (var name in names)
+                Dictionary<string, object?> context = GetContextDictionary(extraRegisters: true);
+                string[] names = ParseRegisterNames(registerNames);
+                var registers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string name in names)
                 {
-                    ulong val = Debugger.GetRegister(name.ToUpper());
-                    regs[name.ToUpper()] = $"0x{val:X}";
+                    if (!context.TryGetValue(name, out object? value))
+                        throw new InvalidOperationException($"Register '{name}' is not available in the broken thread context");
+                    registers[name] = $"0x{ToUInt64(value):X}";
                 }
-                return new { success = true, registers = regs };
+                return new { success = true, registers };
             });
 
         [McpServerTool(Name = "dbg_regs_named_remote"), Description(
@@ -326,15 +332,12 @@ return {LuaBuildRegTable}";
             [Description("Comma-separated register names (e.g. 'RAX,RBX,RIP')")] string registerNames)
             => SafeRun(() =>
             {
-                var names = registerNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                string[] names = ParseRegisterNames(registerNames);
                 var builder = new System.Text.StringBuilder();
                 builder.AppendLine("debug_getContext(false)");
                 builder.AppendLine("local result = {}");
-                foreach (var name in names)
-                {
-                    var upper = name.ToUpper();
-                    builder.AppendLine($"if {upper} ~= nil then result['{upper}'] = string.format('%016X', {upper}) end");
-                }
+                foreach (string name in names)
+                    builder.AppendLine($"if {name} ~= nil then result['{name}'] = string.format('%016X', {name}) end");
                 builder.AppendLine("return result");
 
                 var result = LuaExecutor.Execute(builder.ToString());
@@ -344,8 +347,7 @@ return {LuaBuildRegTable}";
         [McpServerTool(Name = "dbg_regs_remote"), Description(
             "Read all registers from the broken thread's context via Lua. " +
             "Returns both 32-bit and 64-bit register names for the current target architecture.")]
-        public static object DbgRegsRemote()
-            => SafeRun(() => DbgGpregsRemote());
+        public static object DbgRegsRemote() => DbgGpregsRemote();
 
         // ── Continue / Step ──────────────────────────────────────────────────
 
@@ -357,7 +359,7 @@ return {LuaBuildRegTable}";
             [Description("Continue method: 'run' (default), 'stepinto', or 'stepover'")] string method = "run")
             => SafeRun(() =>
             {
-                string ceMethod = method.ToLower() switch
+                string ceMethod = method.ToLowerInvariant() switch
                 {
                     "run" or "continue" or "co_run" => "co_run",
                     "stepinto" or "step_into" or "co_stepinto" => "co_stepinto",
@@ -474,7 +476,9 @@ return frames";
             [Description("Length for 'bytes' or 'string' types")] int length = 16)
             => SafeRunWithAddress(address, addr =>
             {
-                object val = dataType.ToLower() switch
+                if (length <= 0)
+                    return new { success = false, error = "Length must be greater than zero" };
+                object val = dataType.ToLowerInvariant() switch
                 {
                     "byte" => MemoryAccess.ReadByte(addr),
                     "int16" or "short" => MemoryAccess.ReadSmallInteger(addr),
@@ -500,28 +504,144 @@ return frames";
             [Description("Data type: byte, int16, int32, int64, float, double, string")] string dataType = DefaultDataType)
             => SafeRunWithAddress(address, addr =>
             {
-                bool ok = dataType.ToLower() switch
+                bool written = dataType.ToLowerInvariant() switch
                 {
-                    "byte" => MemoryAccess.WriteByte(addr, byte.Parse(value)),
-                    "int16" or "short" => MemoryAccess.WriteSmallInteger(addr, short.Parse(value)),
-                    DefaultDataType or "int" => MemoryAccess.WriteInteger(addr, int.Parse(value)),
-                    "int64" or "qword" or "long" => MemoryAccess.WriteQword(addr, long.Parse(value)),
-                    "float" => MemoryAccess.WriteFloat(addr, float.Parse(value)),
-                    "double" => MemoryAccess.WriteDouble(addr, double.Parse(value)),
+                    "byte" => MemoryAccess.WriteByte(addr, byte.Parse(value, System.Globalization.CultureInfo.InvariantCulture)),
+                    "int16" or "short" => MemoryAccess.WriteSmallInteger(addr, short.Parse(value, System.Globalization.CultureInfo.InvariantCulture)),
+                    DefaultDataType or "int" => MemoryAccess.WriteInteger(addr, int.Parse(value, System.Globalization.CultureInfo.InvariantCulture)),
+                    "int64" or "qword" or "long" => MemoryAccess.WriteQword(addr, long.Parse(value, System.Globalization.CultureInfo.InvariantCulture)),
+                    "float" => MemoryAccess.WriteFloat(addr, float.Parse(value, System.Globalization.CultureInfo.InvariantCulture)),
+                    "double" => MemoryAccess.WriteDouble(addr, double.Parse(value, System.Globalization.CultureInfo.InvariantCulture)),
                     "string" => MemoryAccess.WriteString(addr, value),
                     _ => throw new ArgumentException($"Unknown data type '{dataType}'")
                 };
+                if (!written)
+                    throw new MemoryAccessException("Cheat Engine could not write the requested memory");
 
-                return new { success = ok, address = $"0x{addr:X}", dataType, value };
+                return new { success = true, address = $"0x{addr:X}", dataType, value };
+            });
+
+        [McpServerTool(Name = "dbg_break_thread"), Description(
+            "Request that the debugger break a specific target thread")]
+        public static object DbgBreakThread(
+            [Description("Target thread identifier")] int threadId) =>
+            ToolThread.OnMainThread(() =>
+            {
+                if (threadId <= 0)
+                    return new { success = false, error = "threadId must be greater than zero" };
+                Debugger.BreakThread(threadId);
+                return new { success = true, threadId };
+            });
+
+        [McpServerTool(Name = "dbg_exclude_thread"), Description(
+            "Ignore breakpoint hits from a specific target thread")]
+        public static object DbgExcludeThread(
+            [Description("Target thread identifier")] int threadId) =>
+            ToolThread.OnMainThread(() =>
+            {
+                if (threadId <= 0)
+                    return new { success = false, error = "threadId must be greater than zero" };
+                Debugger.AddThreadToNoBreakList(threadId);
+                return new { success = true, threadId };
+            });
+
+        [McpServerTool(Name = "dbg_include_thread"), Description(
+            "Remove a target thread from the breakpoint exclusion list")]
+        public static object DbgIncludeThread(
+            [Description("Target thread identifier")] int threadId) =>
+            ToolThread.OnMainThread(() =>
+            {
+                if (threadId <= 0)
+                    return new { success = false, error = "threadId must be greater than zero" };
+                Debugger.RemoveThreadFromNoBreakList(threadId);
+                return new { success = true, threadId };
+            });
+
+        [McpServerTool(Name = "dbg_add_thread_bp"), Description(
+            "Set a breakpoint that only applies to one target thread")]
+        public static object DbgAddThreadBreakpoint(
+            [Description("Target thread identifier")] int threadId,
+            [Description("Breakpoint address as hexadecimal")] string address,
+            [Description("Watch size in bytes")] int size = 1,
+            [Description("Trigger: execute, write, or access")] string trigger = "execute") =>
+            ToolThread.OnMainThread(() =>
+            {
+                if (threadId <= 0)
+                    return new { success = false, error = "threadId must be greater than zero" };
+                if (!TryParseAddress(address, out ulong parsed))
+                    return new { success = false, error = InvalidAddressMsg };
+                string ceTrigger = trigger.ToLowerInvariant() switch
+                {
+                    "execute" => "bptExecute",
+                    "write" => "bptWrite",
+                    "access" => "bptAccess",
+                    _ => ""
+                };
+                if (ceTrigger.Length == 0)
+                    return new { success = false, error = "trigger must be execute, write, or access" };
+                if (size is not 1 and not 2 and not 4 and not 8)
+                    return new { success = false, error = "size must be 1, 2, 4, or 8" };
+                Debugger.SetBreakpointForThread(threadId, parsed, size, ceTrigger);
+                return new { success = true, threadId, address = $"0x{parsed:X}", trigger };
+            });
+
+        [McpServerTool(Name = "dbg_context_table"), Description(
+            "Return the current broken-thread context as reported by Cheat Engine")]
+        public static object DbgContextTable(
+            [Description("Include floating-point and XMM state")] bool extraRegisters = false) =>
+            ToolThread.OnMainThread(() => new
+            {
+                success = true,
+                context = Debugger.GetCurrentContextTable(extraRegisters)
+            });
+
+        [McpServerTool(Name = "dbg_read_xmm"), Description(
+            "Read the raw 16-byte value of an XMM register from the broken thread")]
+        public static object DbgReadXmm(
+            [Description("XMM register index (0-15)")] int register) =>
+            ToolThread.OnMainThread(() =>
+            {
+                if (register is < 0 or > 15)
+                    return new { success = false, error = "register must be between 0 and 15" };
+                ulong pointer = Debugger.GetXmmPointer(register);
+                byte[] bytes = MemoryAccess.ReadBytesLocal(pointer, 16);
+                return new
+                {
+                    success = true,
+                    register = $"XMM{register}",
+                    bytes = BitConverter.ToString(bytes).Replace("-", " ")
+                };
+            });
+
+        [McpServerTool(Name = "dbg_lbr_enable"), Description(
+            "Enable or disable CPU last-branch recording for the kernel debugger")]
+        public static object DbgLastBranchEnable(
+            [Description("Enable last-branch recording")] bool enabled) =>
+            ToolThread.OnMainThread(() =>
+            {
+                Debugger.SetLastBranchRecording(enabled);
+                return new { success = true, enabled };
+            });
+
+        [McpServerTool(Name = "dbg_lbr_records"), Description(
+            "Read available CPU last-branch records from the current breakpoint")]
+        public static object DbgLastBranchRecords(
+            [Description("Maximum records to return (1-256)")] int maxRecords = 64) =>
+            ToolThread.OnMainThread(() =>
+            {
+                if (maxRecords is < 1 or > 256)
+                    return new { success = false, error = "maxRecords must be between 1 and 256" };
+                int available = Debugger.GetMaxLastBranchRecord();
+                var records = new List<string>();
+                for (int index = 0; index < Math.Min(available, maxRecords); index++)
+                    records.Add($"0x{Debugger.GetLastBranchRecord(index):X}");
+                return new { success = true, available, records };
             });
 
         // ── Private helpers ──────────────────────────────────────────────────
 
-        private static object SafeRun(Func<object> action)
-        {
-            try { return action(); }
-            catch (Exception ex) { return new { success = false, error = ex.Message }; }
-        }
+        private static object SafeRun(Func<object> action) =>
+            ToolThread.OnMainThread(action);
 
         private static object SafeRunWithAddress(string address, Func<ulong, object> action)
             => SafeRun(() =>
@@ -530,6 +650,24 @@ return frames";
                     return new { success = false, error = InvalidAddressMsg };
                 return action(addr);
             });
+
+        private static string[] ParseRegisterNames(string registerNames)
+        {
+            string[] names = registerNames.Split(
+                    ',',
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(name => name.ToUpperInvariant())
+                .ToArray();
+            if (names.Length == 0)
+                throw new ArgumentException("At least one register name is required");
+
+            foreach (string name in names)
+            {
+                if (!ValidRegisterNames.Contains(name))
+                    throw new ArgumentException($"Unknown register name '{name}'");
+            }
+            return names;
+        }
 
         private static bool TryParseAddress(string address, out ulong result)
         {
@@ -542,49 +680,74 @@ return frames";
             return ulong.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out result);
         }
 
-        private static object ReadRegisters()
+        private static object ReadRegisters(bool extraRegisters)
         {
-            bool is64 = false;
-            try
-            {
-                // Heuristic: if RIP is non-zero, assume 64-bit
-                is64 = Debugger.GetRegister("RIP") != 0;
-            }
-            catch (Exception)
-            {
-                // RIP not available in 32-bit targets; fall back to EIP register set
-            }
-
+            Dictionary<string, object?> context = GetContextDictionary(extraRegisters);
+            bool is64 = context.ContainsKey("RIP");
             string prefix = is64 ? "R" : "E";
 
-            string Fmt(string name) => string.Format(
-                is64 ? "0x{0:X16}" : "0x{0:X8}",
-                Debugger.GetRegister(name));
+            string Format(string name)
+            {
+                if (!context.TryGetValue(name, out object? value))
+                    throw new InvalidOperationException($"Register '{name}' is not available in the broken thread context");
+                return string.Format(
+                    CultureInfo.InvariantCulture,
+                    is64 ? "0x{0:X16}" : "0x{0:X8}",
+                    ToUInt64(value));
+            }
 
             var result = new Dictionary<string, object>
             {
                 ["success"] = true,
                 ["bits"] = is64 ? 64 : 32,
-                ["ip"] = Fmt(prefix + "IP"),
-                ["ax"] = Fmt(prefix + "AX"),
-                ["bx"] = Fmt(prefix + "BX"),
-                ["cx"] = Fmt(prefix + "CX"),
-                ["dx"] = Fmt(prefix + "DX"),
-                ["si"] = Fmt(prefix + "SI"),
-                ["di"] = Fmt(prefix + "DI"),
-                ["bp"] = Fmt(prefix + "BP"),
-                ["sp"] = Fmt(prefix + "SP"),
+                ["ip"] = Format(prefix + "IP"),
+                ["ax"] = Format(prefix + "AX"),
+                ["bx"] = Format(prefix + "BX"),
+                ["cx"] = Format(prefix + "CX"),
+                ["dx"] = Format(prefix + "DX"),
+                ["si"] = Format(prefix + "SI"),
+                ["di"] = Format(prefix + "DI"),
+                ["bp"] = Format(prefix + "BP"),
+                ["sp"] = Format(prefix + "SP"),
             };
 
             if (is64)
             {
-                for (int i = 8; i <= 15; i++)
-                    result["r" + i] = Fmt("R" + i);
+                for (int index = 8; index <= 15; index++)
+                    result["r" + index] = Format("R" + index);
             }
 
-            result["flags"] = $"0x{Debugger.GetRegister("EFLAGS"):X8}";
+            result["flags"] = context.TryGetValue("EFLAGS", out object? flags)
+                ? $"0x{ToUInt64(flags):X8}"
+                : "0x00000000";
             return result;
         }
+
+        private static Dictionary<string, object?> GetContextDictionary(bool extraRegisters)
+        {
+            object? value = Debugger.GetCurrentContextTable(extraRegisters);
+            if (value is not Dictionary<string, object?> source)
+                throw new InvalidOperationException("Cheat Engine did not return a broken-thread context table");
+
+            return source.ToDictionary(
+                item => item.Key.ToUpperInvariant(),
+                item => item.Value,
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static ulong ToUInt64(object? value) => value switch
+        {
+            long signed => unchecked((ulong)signed),
+            int signed => unchecked((ulong)signed),
+            ulong unsigned => unsigned,
+            double number => checked((ulong)number),
+            string text when ulong.TryParse(
+                text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? text[2..] : text,
+                NumberStyles.HexNumber,
+                CultureInfo.InvariantCulture,
+                out ulong parsed) => parsed,
+            _ => throw new InvalidOperationException($"Unsupported register value '{value}'")
+        };
 
         private static List<Dictionary<string, object>> ParseHitsFromResult(CESDK.Classes.LuaResult result)
         {

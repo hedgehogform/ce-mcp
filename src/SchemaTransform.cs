@@ -11,10 +11,12 @@ namespace CEMCP
     /// <summary>
     /// Registers MCP tools with a JSON-schema transform that collapses nullable
     /// "type": [ ..., "null" ] arrays down to their single non-null type. The Anthropic
-    /// API tool-schema converter (Claude Code and any Anthropic-API MCP client) rejects
-    /// array-valued "type" with a 400 error. Optional parameters (int?, string?, bool?)
-    /// generate exactly such schemas; since they are already absent from "required",
-    /// dropping the redundant "null" is semantically identical.
+    /// API tool-schema converter (Claude Code and other Anthropic-API MCP clients)
+    /// rejects array-valued "type" with a 400 error. Optional parameters are already
+    /// absent from "required", so dropping the redundant "null" is semantically
+    /// identical. ModelContextProtocol 2.1 generates the schema, but its
+    /// WithTools&lt;T&gt; overload exposes serializer options only; this registration
+    /// shim is required to supply McpServerToolCreateOptions.SchemaCreateOptions.
     /// </summary>
     internal static class SchemaTransform
     {

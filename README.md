@@ -14,7 +14,7 @@ A Model Context Protocol (MCP) server plugin for Cheat Engine that provides acce
 This project exposes Cheat Engine functionality as MCP tools over Streamable HTTP using the official [Model Context Protocol C# SDK](https://github.com/modelcontextprotocol/csharp-sdk).
 
 - **MCP Server**: Runs on `http://localhost:6300` with Streamable HTTP transport at `/`
-- **11 MCP Tool Classes**: Lua execution, process management, memory read/write, AOB scanning, disassembly, memory scanning, address list management, and more
+- **20 MCP Tool Classes**: process control, memory and pointer workflows, scans, symbols/RTTI, Structure Dissect, cheat tables, disassembly/analysis, injection, debugger, optional DBVM, address-list, conversion, and Lua operations
 - **Single DLL Plugin Artifact**: NuGet dependencies are embedded into `ce-mcp.dll`; .NET shared runtimes still need to be installed on the machine
 - **Distributable AI Skill**: Release bundles include `skills/ce-mcp/` beside the DLL for AI clients that consume repo skills
 - **Direct MCP Integration**: Connect AI clients (Claude Desktop, VS Code Copilot, etc.) directly — no bridge client needed
@@ -102,6 +102,8 @@ dotnet build
 
 Build output is written to `bin/x64/Debug/net10.0-windows/`. Copy `ce-mcp.dll` from that folder into your Cheat Engine plugins directory, then restart Cheat Engine and enable the plugin. The same output folder also contains `skills/ce-mcp/`; keep that folder with the distributable bundle for AI clients.
 
+Runtime logs from both CESDK and the ASP.NET Core MCP host use NLog and one canonical file: `%APPDATA%\CeMCP\ce-mcp.log`. The file rolls at 10 MiB and retains five archives.
+
 ## Development
 
 ### Initial Setup
@@ -162,7 +164,18 @@ $env:CE_MCP_URL = "http://localhost:6300/"
 dotnet test --filter TestCategory=Live
 ```
 
-Current live tests use only safe read/inspection calls: initialize/list tools, `get_plugin_version`, `get_current_process`, and `execute_lua` with a small `return` script. Tests that write memory, attach debuggers, alter target execution, or require a specific target process must stay opt-in and document their setup clearly.
+Default live tests use safe read/inspection calls. The scan regressions also exercise `aob_scan` and a narrow-range named `memory_scan` when CE already has a readable target attached; otherwise those tests are inconclusive. Tests that write memory, attach debuggers, alter execution, load/save files, or require a specific target must stay explicitly opt-in and document setup.
+
+For broad end-to-end coverage against a disposable target, use the dedicated Notepad suite. It launches Notepad through MCP, discovers the real Windows 11 Notepad process, exercises 107 process-scoped tools, restores CE table state, frees allocations, deletes owned temporary files, detaches the debugger, and terminates only the discovered Notepad PID:
+
+```powershell
+$env:CE_MCP_LIVE = "1"
+$env:CE_MCP_NOTEPAD_LIVE = "1"
+$env:CE_MCP_URL = "http://localhost:6300/"
+dotnet test tests/CeMCP.Tests/CeMCP.Tests.csproj -p:Platform=x64 --filter TestCategory=NotepadLive
+```
+
+The suite verifies that every live tool is either attempted or has an explicit exclusion. It excludes `open_foreground_process`, symbol downloads/kernel symbols, native/.NET payload injection, and DBVM initialization/physical-memory/watch operations because those are not safely scoped to the disposable Notepad process.
 
 Manual smoke testing is still useful for UI and CE runtime behavior:
 
